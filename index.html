@@ -44,7 +44,6 @@
         animation: pulse-custom 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
       
-      /* Animação de Flash Profissional para Novos Sinais */
       @keyframes flash-call {
         0% { box-shadow: 0 0 0px 0px rgba(16, 185, 129, 0); transform: scale(1); }
         30% { box-shadow: 0 0 60px 20px rgba(16, 185, 129, 0.5); transform: scale(1.02); }
@@ -67,13 +66,16 @@
   "imports": {
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://esm.sh/vite@^7.3.0"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
