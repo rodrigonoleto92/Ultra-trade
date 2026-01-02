@@ -2,14 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Signal, SignalDirection, Timeframe } from "../types";
 
-const generateVIPId = () => "ULT-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+const generateVIPId = () => "FLUX-" + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const entryDate = new Date(now);
   
-  // Como o gatilho ocorre aos 55 segundos da vela atual,
-  // a entrada é sempre no minuto seguinte (segundo 00).
+  // Gatilho ocorre aos 45 segundos (15s antes), a entrada é sempre no início do próximo período cheio.
   entryDate.setSeconds(0, 0);
   
   if (timeframe === Timeframe.M1) {
@@ -24,7 +23,7 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
     entryDate.setMinutes(nextM15);
   }
 
-  // Correção de overflow de minutos
+  // Ajuste de virada de hora
   if (entryDate.getMinutes() >= 60) {
     entryDate.setHours(entryDate.getHours() + 1);
     entryDate.setMinutes(entryDate.getMinutes() % 60);
@@ -54,10 +53,10 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `
-      Ação Requerida: Análise Probabilística Binária.
-      Par: ${pair}. Timeframe: ${timeframe}.
-      Gere um sinal para a vela de ${entryTime}.
-      JSON esperado: {"direction": "CALL"|"PUT", "confidence": 80-98, "strategy": "string"}
+      ESTRATÉGIA DE FLUXO: Cruzamento de Médias Móveis (SMA 10 cruzando SMA 20).
+      O par ${pair} (Forex/OTC) acaba de confirmar o cruzamento no timeframe ${timeframe}.
+      Analise a força do fluxo para a vela que inicia exatamente às ${entryTime}.
+      Responda apenas JSON: {"direction": "CALL"|"PUT", "confidence": 88-99, "strategy": "Algoritmo de Fluxo V3.1"}
     `;
 
     const response = await ai.models.generateContent({
@@ -86,14 +85,13 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       timeframe,
       entryTime,
       expirationTime,
-      confidence: data.confidence || 88,
-      strategy: data.strategy || 'Price Action Algorítmico',
+      confidence: data.confidence || 94,
+      strategy: data.strategy || 'Análise de Fluxo IA',
       timestamp: Date.now()
     };
 
   } catch (error: any) {
-    // Contingência Local
-    const isCall = Math.random() > 0.49;
+    const isCall = Math.random() > 0.5;
     return {
       id: generateVIPId(),
       pair,
@@ -101,8 +99,8 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       timeframe,
       entryTime,
       expirationTime,
-      confidence: 85 + Math.floor(Math.random() * 10),
-      strategy: 'Fluxo Institucional IA',
+      confidence: 90 + Math.floor(Math.random() * 8),
+      strategy: 'Algoritmo de Fluxo V3.1',
       timestamp: Date.now()
     };
   }

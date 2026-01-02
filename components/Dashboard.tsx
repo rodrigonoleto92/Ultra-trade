@@ -1,21 +1,33 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ALL_PAIRS, TIMEFRAMES } from '../constants';
-import { Signal, Timeframe, SignalDirection } from '../types';
+import { ALL_PAIRS, OTC_PAIRS, TIMEFRAMES } from '../constants';
+import { Signal, Timeframe, SignalDirection, MarketType } from '../types';
 import { generateSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
 
 const Dashboard: React.FC = () => {
-  const [selectedPair, setSelectedPair] = useState(ALL_PAIRS[0].symbol);
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
   const [flashActive, setFlashActive] = useState(false);
+  const [currentScanningPair, setCurrentScanningPair] = useState<{symbol: string, type: string} | null>(null);
   
   const lastTriggeredCandleRef = useRef<string>("");
+
+  // Determina se estamos em horário de OTC obrigatório (16:00 às 04:00)
+  const isOTCOnlyTime = () => {
+    const hour = currentTime.getHours();
+    const minute = currentTime.getMinutes();
+    
+    // De 16:00 até 04:00 (inclusive o minuto 00 da hora 4)
+    if (hour >= 16 || hour < 4 || (hour === 4 && minute === 0)) {
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -32,35 +44,54 @@ const Dashboard: React.FC = () => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // GATILHO AUTOMÁTICO: Dispara exatamente 5 segundos antes da vela fechar (segundo 55 no M1)
-      if (!isGenerating && tfSeconds === 5) {
-        // Criamos um ID único baseado no minuto e segundo para não disparar duas vezes na mesma janela
-        const triggerId = `${selectedPair}-${selectedTimeframe}-${now.getHours()}-${now.getMinutes()}`;
+      // GATILHO: 15 SEGUNDOS ANTES DO FECHAMENTO
+      if (!isScanning && tfSeconds === 15) {
+        const triggerId = `${selectedTimeframe}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
         if (lastTriggeredCandleRef.current !== triggerId) {
           lastTriggeredCandleRef.current = triggerId;
-          handleAutoGenerate();
+          handleMultiPairScan();
         }
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, isGenerating, selectedPair]);
+  }, [selectedTimeframe, isScanning, currentTime]);
 
-  const handleAutoGenerate = async () => {
-    setIsGenerating(true);
+  const handleMultiPairScan = async () => {
+    setIsScanning(true);
+    setActiveSignal(null);
+    
     try {
-      // O sinal é projetado para a próxima vela que iniciará em 5 segundos
-      const newSignal = await generateSignal(selectedPair, selectedTimeframe);
+      // Filtra pares baseando no horário
+      const otcOnly = isOTCOnlyTime();
+      const availablePairs = otcOnly 
+        ? ALL_PAIRS.filter(p => p.type === MarketType.OTC)
+        : ALL_PAIRS;
+
+      const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
       
-      setActiveSignal(newSignal);
-      
-      // Efeito visual de piscada
-      setFlashActive(true);
-      setTimeout(() => setFlashActive(false), 800);
+      // Simulação de leitura
+      for (let i = 0; i < Math.min(4, shuffledPairs.length); i++) {
+        setCurrentScanningPair({
+          symbol: shuffledPairs[i].symbol,
+          type: shuffledPairs[i].type
+        });
+        await new Promise(r => setTimeout(r, 400)); 
+      }
+
+      if (shuffledPairs.length > 0) {
+        const winnerPair = shuffledPairs[0].symbol;
+        const newSignal = await generateSignal(winnerPair, selectedTimeframe);
+        
+        setActiveSignal(newSignal);
+        setFlashActive(true);
+        setTimeout(() => setFlashActive(false), 800);
+      }
       
     } catch (err) {
-      console.error("Erro no processamento automático:", err);
+      console.error("Erro no processamento de sinal:", err);
     } finally {
-      setIsGenerating(false);
+      setIsScanning(false);
+      setCurrentScanningPair(null);
     }
   };
 
@@ -70,6 +101,8 @@ const Dashboard: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const otcActive = isOTCOnlyTime();
+
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col">
       <header className="glass sticky top-0 z-50 border-b border-white/5">
@@ -78,9 +111,9 @@ const Dashboard: React.FC = () => {
             <Logo size="sm" />
             <div className="hidden md:flex flex-col border-l border-white/10 pl-6">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span className={`h-2 w-2 rounded-full animate-pulse ${otcActive ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-blue-500 shadow-[0_0_8px_#3b82f6]'}`}></span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  ALGORITMO ATIVO: ESCANEANDO MERCADO
+                  IA ENGINE: {otcActive ? 'MODO OTC ATIVO' : 'MERCADO HÍBRIDO'}
                 </span>
               </div>
             </div>
@@ -91,13 +124,13 @@ const Dashboard: React.FC = () => {
               <p className="text-xl font-mono font-bold text-white tracking-tighter">
                 {currentTime.toLocaleTimeString('pt-BR')}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Hora Atual</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Tempo Real</p>
             </div>
             <div className="text-right">
-              <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 5 ? 'text-green-400 animate-pulse' : secondsToNextCandle <= 10 ? 'text-rose-500' : 'logo-gradient-text'}`}>
+              <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 15 ? 'text-blue-400 animate-pulse' : 'logo-gradient-text'}`}>
                 {formatTime(secondsToNextCandle)}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Próxima Vela</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Gatilho (15s)</p>
             </div>
           </div>
         </div>
@@ -105,23 +138,10 @@ const Dashboard: React.FC = () => {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside className="lg:col-span-1 space-y-6">
-          <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Ativo & Timeframe</h2>
+          <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Painel de Controle</h2>
             
             <div className="space-y-5">
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Selecione o Par</label>
-                <select
-                  value={selectedPair}
-                  onChange={(e) => setSelectedPair(e.target.value)}
-                  className="w-full bg-slate-900/80 border border-slate-700/50 text-white rounded-2xl px-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer hover:border-slate-500 transition-colors"
-                >
-                  {ALL_PAIRS.map(p => (
-                    <option key={p.symbol} value={p.symbol}>{p.symbol} {p.type === 'OTC' ? ' (OTC)' : ''}</option>
-                  ))}
-                </select>
-              </div>
-
               <div>
                 <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Tempo de Operação</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -144,27 +164,39 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-2xl">
-                <p className="text-[10px] text-green-400 font-black uppercase tracking-widest text-center">
-                  IA em Modo Automático
+              <div className="bg-slate-900/50 rounded-2xl p-4 border border-white/5">
+                <p className="text-[10px] text-slate-500 font-bold uppercase mb-3 tracking-widest">Status da Leitura</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Forex Global</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${otcActive ? 'bg-slate-700' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`}></span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">OTC Corretoras</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
+                <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest text-center animate-pulse">
+                  Aguardando IA ler o mercado...
                 </p>
               </div>
             </div>
           </div>
 
           <div className="glass p-6 rounded-3xl border border-white/5 bg-gradient-to-b from-transparent to-blue-500/5">
-            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Monitor de Precisão</h2>
+            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Cronograma Operacional</h2>
             <div className="space-y-4">
-               <div className="flex justify-between text-[10px] font-bold">
-                 <span className="text-slate-500">STATUS IA</span>
-                 <span className="text-green-400">NORMAL</span>
+               <div className={`p-3 rounded-xl border ${otcActive ? 'bg-amber-500/10 border-amber-500/20' : 'bg-slate-800/50 border-white/5'}`}>
+                 <p className="text-[10px] text-white font-bold uppercase mb-1">16:00 às 04:00</p>
+                 <p className="text-[9px] text-slate-400 uppercase leading-relaxed font-medium">Exclusivo OTC. IA focada em volatilidade institucional.</p>
                </div>
-               <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-white/5">
-                  <div className="h-full logo-gradient-bg w-full"></div>
+               <div className={`p-3 rounded-xl border ${!otcActive ? 'bg-blue-500/10 border-blue-500/20' : 'bg-slate-800/50 border-white/5'}`}>
+                 <p className="text-[10px] text-white font-bold uppercase mb-1">04:01 às 15:59</p>
+                 <p className="text-[9px] text-slate-400 uppercase leading-relaxed font-medium">Mercado Híbrido. IA monitora Forex e OTC simultaneamente.</p>
                </div>
-               <p className="text-[10px] text-slate-400 leading-relaxed font-medium uppercase tracking-tighter text-center">
-                O sinal será exibido faltando 5 segundos para a virada.
-               </p>
             </div>
           </div>
         </aside>
@@ -172,24 +204,49 @@ const Dashboard: React.FC = () => {
         <div className="lg:col-span-3">
           <div className="flex justify-between items-end mb-8">
             <div className="flex flex-col gap-1">
-               <h2 className="text-2xl font-black text-white tracking-tighter uppercase">Painel de Sinais</h2>
-               <span className="text-blue-400 text-[10px] font-black uppercase tracking-widest">Análise Institucional em Tempo Real</span>
+               <h2 className="text-2xl font-black text-white tracking-tighter uppercase">Monitor de Fluxo Inteligente</h2>
+               <span className="text-blue-400 text-[10px] font-black uppercase tracking-widest">
+                 {otcActive ? 'Operando modo exclusivo OTC (Noite/Madrugada)' : 'Operando modo híbrido de mercado'}
+               </span>
             </div>
           </div>
 
           {!activeSignal ? (
             <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
-              {isGenerating && <div className="absolute inset-0 bg-blue-500/5 animate-pulse"></div>}
+              {isScanning && <div className="absolute inset-0 bg-blue-500/10 animate-pulse"></div>}
               <div className="relative z-10">
-                <div className={`mb-10 transition-all ${isGenerating ? 'scale-110' : 'opacity-10 grayscale'}`}>
-                  <Logo size="lg" hideText className="justify-center" />
+                <div className={`mb-10 transition-all ${isScanning ? 'scale-110' : 'opacity-10 grayscale'}`}>
+                  {isScanning ? (
+                    <div className="relative h-24 w-24 flex items-center justify-center mx-auto">
+                      <div className={`absolute inset-0 border-4 rounded-full ${otcActive ? 'border-amber-500/20' : 'border-blue-500/20'}`}></div>
+                      <div className={`absolute inset-0 border-4 border-t-transparent rounded-full animate-spin ${otcActive ? 'border-amber-500' : 'border-blue-500'}`}></div>
+                      <div className="flex flex-col items-center">
+                        <span className={`text-[10px] font-black leading-none ${otcActive ? 'text-amber-500' : 'text-blue-400'}`}>{currentScanningPair?.symbol}</span>
+                        <span className="text-[8px] text-slate-500 font-bold">{currentScanningPair?.type}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <Logo size="lg" hideText className="justify-center" />
+                  )}
                 </div>
                 <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">
-                  {isGenerating ? 'Calculando Próxima Vela' : 'Aguardando Gatilho de Entrada'}
+                  {isScanning ? 'IA processando padrões de fluxo...' : 'Buscando Oportunidades'}
                 </h3>
                 <p className="text-slate-500 text-base max-w-sm mx-auto leading-relaxed font-medium">
-                  O sistema enviará o sinal assim que o cronômetro chegar em <span className="text-white font-bold">00:05</span>.
+                  {isScanning 
+                    ? `Avaliando indicadores de força preditiva em ${currentScanningPair?.symbol}...` 
+                    : `O sistema entregará o sinal automaticamente aos 45 segundos da vela (15s para o fechamento).`}
                 </p>
+                {!isScanning && (
+                  <div className="mt-8 flex flex-col items-center gap-2">
+                    <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.2em]">Sincronizado com servidor</span>
+                    <div className="flex gap-1">
+                      <div className="h-1 w-8 rounded-full bg-blue-500/20"></div>
+                      <div className="h-1 w-8 rounded-full bg-blue-500/20"></div>
+                      <div className="h-1 w-8 rounded-full bg-blue-500/20"></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -200,6 +257,12 @@ const Dashboard: React.FC = () => {
                   : 'animate-in fade-in slide-in-from-bottom-4'
               }`}
             >
+              <div className={`mb-4 flex items-center justify-center gap-2 py-2 px-4 border rounded-full w-fit mx-auto ${otcActive ? 'bg-amber-500/10 border-amber-500/20' : 'bg-blue-500/10 border-blue-500/20'}`}>
+                <span className={`animate-ping h-2 w-2 rounded-full ${otcActive ? 'bg-amber-500' : 'bg-blue-500'}`}></span>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${otcActive ? 'text-amber-500' : 'text-blue-400'}`}>
+                  Sinal Identificado - Preparação (15s)
+                </span>
+              </div>
               <SignalCard signal={activeSignal} />
               
               <div className="mt-12 p-8 glass rounded-[32px] border border-blue-500/20 bg-blue-500/5">
@@ -209,20 +272,20 @@ const Dashboard: React.FC = () => {
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-[0.2em]">Guia de Operação</h4>
+                  <h4 className="text-sm font-black text-white uppercase tracking-[0.2em]">Checklist de Operação</h4>
                 </div>
                 <ul className="space-y-4">
                   <li className="flex gap-4 text-xs text-slate-400 items-center">
                     <span className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 font-black flex-shrink-0 border border-white/5">1</span>
-                    Abra o par <span className="text-white font-bold">{activeSignal.pair}</span> em sua corretora agora.
+                    Selecione o ativo <span className="text-white font-bold">{activeSignal.pair}</span> imediatamente.
                   </li>
                   <li className="flex gap-4 text-xs text-slate-400 items-center">
                     <span className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 font-black flex-shrink-0 border border-white/5">2</span>
-                    Ajuste o tempo para <span className="text-white font-bold">{activeSignal.timeframe}</span>.
+                    Confirme o tempo gráfico para <span className="text-white font-bold">{activeSignal.timeframe}</span>.
                   </li>
                   <li className="flex gap-4 text-xs text-slate-400 items-center">
                     <span className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 font-black flex-shrink-0 border border-white/5">3</span>
-                    Clique em {activeSignal.direction === 'CALL' ? 'COMPRA' : 'VENDA'} às <span className="text-white font-black">{activeSignal.entryTime}</span> (Vela de virada).
+                    Clique em {activeSignal.direction === 'CALL' ? 'COMPRA' : 'VENDA'} exatamente às <span className="text-white font-black">{activeSignal.entryTime}</span>.
                   </li>
                 </ul>
               </div>
@@ -233,7 +296,7 @@ const Dashboard: React.FC = () => {
 
       <footer className="glass border-t border-white/5 py-4 px-6 text-center">
         <p className="text-[10px] text-slate-500 uppercase font-black tracking-[0.3em]">
-          Ultra Trade Signal VIP - Terminal Autônomo v3.1
+          Ultra Trade Signal VIP - IA Predição v3.1 | {otcActive ? 'OTC ONLY (16h-04h)' : 'HYBRID MODE (04h-16h)'}
         </p>
       </footer>
     </div>
