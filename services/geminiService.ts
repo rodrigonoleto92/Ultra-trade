@@ -8,7 +8,7 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const entryDate = new Date(now);
   
-  // Gatilho ocorre aos 45 segundos (15s antes), a entrada é sempre no início do próximo período cheio.
+  // Gatilho ocorre 15s antes (aos 45s), a entrada é na virada do minuto/período.
   entryDate.setSeconds(0, 0);
   
   if (timeframe === Timeframe.M1) {
@@ -23,7 +23,6 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
     entryDate.setMinutes(nextM15);
   }
 
-  // Ajuste de virada de hora
   if (entryDate.getMinutes() >= 60) {
     entryDate.setHours(entryDate.getHours() + 1);
     entryDate.setMinutes(entryDate.getMinutes() % 60);
@@ -52,11 +51,21 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // Instrução técnica rigorosa para a IA seguir o cruzamento de médias
     const prompt = `
-      ESTRATÉGIA DE FLUXO: Cruzamento de Médias Móveis (SMA 10 cruzando SMA 20).
-      O par ${pair} (Forex/OTC) acaba de confirmar o cruzamento no timeframe ${timeframe}.
-      Analise a força do fluxo para a vela que inicia exatamente às ${entryTime}.
-      Responda apenas JSON: {"direction": "CALL"|"PUT", "confidence": 88-99, "strategy": "Algoritmo de Fluxo V3.1"}
+      SISTEMA DE FLUXO IA V3.1:
+      Ativo: ${pair}
+      Timeframe: ${timeframe}
+      Horário de Entrada: ${entryTime}
+      
+      ESTRATÉGIA: Cruzamento de Médias Móveis (SMA 10 e SMA 20).
+      REGRA DE OURO: 
+      1. Se a SMA 10 (rápida) cruzar PARA CIMA da SMA 20 (lenta), é um sinal forte de COMPRA (CALL).
+      2. Se a SMA 10 (rápida) cruzar PARA BAIXO da SMA 20 (lenta), é um sinal forte de VENDA (PUT).
+      3. Siga sempre o fluxo do cruzamento.
+      
+      ANALISE O CENÁRIO E DECIDA O SINAL PARA A PRÓXIMA VELA.
+      Responda apenas JSON: {"direction": "CALL"|"PUT", "confidence": 88-99, "reason": "SMA Crossing Up/Down"}
     `;
 
     const response = await ai.models.generateContent({
@@ -69,9 +78,9 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
-            strategy: { type: Type.STRING },
+            reason: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'strategy'],
+          required: ['direction', 'confidence'],
         },
       },
     });
@@ -86,7 +95,7 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       entryTime,
       expirationTime,
       confidence: data.confidence || 94,
-      strategy: data.strategy || 'Análise de Fluxo IA',
+      strategy: 'Algoritmo de Fluxo V3.1', // Nome genérico para o usuário
       timestamp: Date.now()
     };
 
