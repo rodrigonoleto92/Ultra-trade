@@ -36,7 +36,6 @@ export const TIMEFRAMES = [
  * Exemplo: ['usuario2026', 'acesso_temporario', 'vip_premium']
  */
 export const APP_PASSWORDS = [
-  'usuario2026', 
   'temp123', 
   'trade99'
 ];
