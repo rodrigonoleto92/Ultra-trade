@@ -30,4 +30,13 @@ export const TIMEFRAMES = [
   { label: 'M15', value: Timeframe.M15 },
 ];
 
-export const APP_PASSWORD = 'usuario2026';
+/**
+ * Para adicionar novas senhas, basta colocar uma vírgula dentro dos colchetes
+ * e adicionar a nova senha entre aspas. 
+ * Exemplo: ['usuario2026', 'acesso_temporario', 'vip_premium']
+ */
+export const APP_PASSWORDS = [
+  'usuario2026', 
+  'temp123', 
+  'trade99'
+];

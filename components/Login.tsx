@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { APP_PASSWORD } from '../constants';
+import { APP_PASSWORDS } from '../constants';
 import Logo from './Logo';
 
 interface LoginProps {
@@ -13,10 +13,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === APP_PASSWORD) {
+    // Verifica se a senha digitada está incluída na lista de senhas permitidas
+    if (APP_PASSWORDS.includes(password)) {
       onLogin();
     } else {
-      setError('Senha de acesso inválida.');
+      setError('Senha de acesso inválida ou expirada.');
       setPassword('');
     }
   };
