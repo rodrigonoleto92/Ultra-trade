@@ -6,7 +6,11 @@ import { generateSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onLogout: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -120,19 +124,30 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 sm:gap-8">
             <div className="text-right hidden sm:block border-r border-white/10 pr-8">
               <p className="text-xl font-mono font-bold text-white tracking-tighter">
                 {currentTime.toLocaleTimeString('pt-BR')}
               </p>
               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Tempo Atual</p>
             </div>
-            <div className="text-right">
+            <div className="text-right border-r border-white/10 pr-4 sm:pr-8">
               <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 15 ? 'text-blue-400 animate-pulse' : 'logo-gradient-text'}`}>
                 {formatTime(secondsToNextCandle)}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Fechamento Vela</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Fechamento</p>
             </div>
+            
+            <button 
+              onClick={onLogout}
+              className="group flex items-center gap-2 py-2 px-4 rounded-xl border border-white/5 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all duration-300"
+              title="Sair do Terminal"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500 group-hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-rose-500 hidden md:block">Sair</span>
+            </button>
           </div>
         </div>
       </header>

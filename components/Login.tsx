@@ -4,7 +4,7 @@ import { APP_PASSWORDS } from '../constants';
 import Logo from './Logo';
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (password: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -15,7 +15,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     // Verifica se a senha digitada está incluída na lista de senhas permitidas
     if (APP_PASSWORDS.includes(password)) {
-      onLogin();
+      onLogin(password);
     } else {
       setError('Senha de acesso inválida ou expirada.');
       setPassword('');
