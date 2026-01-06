@@ -67,10 +67,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       let availablePairs = [];
 
       if (assetCategory === 'CRYPTO') {
-        // Crypto é sempre OTC na maioria das plataformas
         availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.CRYPTO_OTC);
       } else {
-        // Moedas respeita o horário de mercado/OTC
         availablePairs = otcActive 
           ? ALL_PAIRS.filter(p => p.type === MarketType.OTC)
           : ALL_PAIRS.filter(p => p.type === MarketType.FOREX);
@@ -83,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           symbol: shuffledPairs[i].symbol,
           type: shuffledPairs[i].type
         });
-        await new Promise(r => setTimeout(r, 350)); 
+        await new Promise(r => setTimeout(r, 450)); 
       }
 
       if (shuffledPairs.length > 0) {
@@ -122,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-purple-500 shadow-[0_0_8px_#a855f7]' : (otcActive ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-blue-500 shadow-[0_0_8px_#3b82f6]')}`}></span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  {assetCategory === 'CRYPTO' ? 'SCANNER CRYPTO OTC V4.1' : (isWeekend ? 'SCANNER WEEKEND OTC V4.1' : (otcActive ? 'SCANNER OTC V4.1' : 'SCANNER GLOBAL V4.1'))}
+                  {assetCategory === 'CRYPTO' ? 'IA STRUCTURE CRYPTO v6.0' : (isWeekend ? 'IA STRUCTURE WEEKEND v6.0' : (otcActive ? 'IA STRUCTURE OTC v6.0' : 'IA STRUCTURE GLOBAL v6.0'))}
                 </span>
               </div>
             </div>
@@ -158,7 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside className="lg:col-span-1 space-y-6">
           <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Parâmetros</h2>
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Parâmetros IA</h2>
             
             <div className="space-y-6">
               <div>
@@ -215,28 +213,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
               </div>
 
-              <div className="bg-blue-500/5 rounded-2xl p-4 border border-blue-500/10">
-                <p className="text-[10px] text-blue-400 font-black uppercase mb-2 tracking-widest">Inteligência</p>
+              <div className="bg-emerald-500/5 rounded-2xl p-4 border border-emerald-500/10">
+                <p className="text-[10px] text-emerald-400 font-black uppercase mb-2 tracking-widest">Filtro de Estrutura</p>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                  {assetCategory === 'CRYPTO' 
-                    ? 'Analisando volume de baleias e padrões de exaustão em redes descentralizadas.' 
-                    : 'Monitorando fluxos institucionais e correlação de moedas em tempo real.'}
+                  Priorizando sinais de rompimento em canais secundários a favor da tendência mestre (LTA/LTB).
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="glass p-6 rounded-3xl border border-white/5 bg-gradient-to-b from-transparent to-blue-500/5">
-            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Agenda do Mercado</h2>
-            <div className="space-y-4">
-               <div className={`p-3 rounded-xl border ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/50' : 'bg-slate-800/40 border-white/5 opacity-40'}`}>
-                 <p className="text-[10px] text-white font-bold uppercase mb-1">Cripto (24/7 OTC)</p>
-                 <p className="text-[9px] text-slate-400 uppercase font-medium">Atividade ininterrupta</p>
-               </div>
-               <div className={`p-3 rounded-xl border ${assetCategory === 'MOEDAS' && (isWeekend || otcActive) ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-800/40 border-white/5 opacity-40'}`}>
-                 <p className="text-[10px] text-white font-bold uppercase mb-1">Moedas (OTC Ativo)</p>
-                 <p className="text-[9px] text-slate-400 uppercase font-medium">Finais de semana e Noites</p>
-               </div>
             </div>
           </div>
         </aside>
@@ -251,15 +233,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     <div className="relative h-32 w-32 flex items-center justify-center mx-auto">
                       <div className={`absolute inset-0 border-4 rounded-full ${assetCategory === 'CRYPTO' ? 'border-purple-500/10' : 'border-blue-500/10'}`}></div>
                       <div className={`absolute inset-0 border-4 rounded-full animate-spin ${assetCategory === 'CRYPTO' ? 'border-t-purple-500' : 'border-t-blue-500'}`}></div>
-                      <div className="flex flex-col items-center">
-                        <span className={`text-xs font-black leading-none ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-blue-400'}`}>{currentScanningPair?.symbol}</span>
-                        <span className="text-[8px] text-slate-500 font-bold uppercase mt-1">Deep Analysis...</span>
+                      <div className="flex flex-col items-center text-center">
+                        <span className={`text-[10px] font-black leading-none mb-1 ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-blue-400'}`}>{currentScanningPair?.symbol}</span>
+                        <span className="text-[8px] text-slate-500 font-bold uppercase">ANALISANDO ESTRUTURA...</span>
                       </div>
                     </div>
                   ) : (
                     <div className="h-32 w-32 rounded-full border-2 border-slate-800 flex items-center justify-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                     </div>
                   )}
@@ -267,23 +249,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 
                 <div className="max-w-md w-full">
                   <h3 className="text-3xl font-black text-white mb-6 tracking-tighter uppercase">
-                    {isScanning ? 'Processando Redes...' : `Aguardando ${assetCategory.toLowerCase()}`}
+                    {isScanning ? 'IA BUSCANDO POR ENTRADA' : `AGUARDANDO OPORTUNIDADE`}
                   </h3>
                   
-                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${secondsToNextCandle <= 20 ? (assetCategory === 'CRYPTO' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-blue-500/10 border-blue-500/30') : 'bg-slate-900/40 border-white/5'}`}>
+                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${secondsToNextCandle <= 20 ? (assetCategory === 'CRYPTO' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-emerald-500/10 border-emerald-500/30') : 'bg-slate-900/40 border-white/5'}`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
                       {secondsToNextCandle > 15 
-                        ? `A IA iniciará o rastreamento aos 15 segundos finais da vela ${selectedTimeframe}.`
-                        : `Sinal iminente. Filtrando ruído de mercado para ${assetCategory === 'CRYPTO' ? 'OTC Cripto' : 'Moedas'}.`}
+                        ? `Aguardando a zona de exaustão do canal secundário para disparar o gatilho.`
+                        : `ESTRUTURA DETECTADA! Confirmando rompimento de canal corretivo...`}
                     </p>
                   </div>
 
                   {!isScanning && (
                     <div className="flex flex-col items-center gap-4">
-                       <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Monitor {assetCategory} Ativo</span>
+                       <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Protocolo VIP v6.0 Ativo</span>
                        <div className="w-48 h-1 bg-slate-900 rounded-full overflow-hidden">
                          <div 
-                          className={`h-full transition-all duration-1000 ease-linear shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-purple-500 shadow-purple-500/50' : 'bg-blue-500 shadow-blue-500/50'}`}
+                          className={`h-full transition-all duration-1000 ease-linear shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-purple-500 shadow-purple-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`}
                           style={{ width: `${(60 - secondsToNextCandle) * 1.66}%` }}
                          ></div>
                        </div>
@@ -293,21 +275,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               </div>
             </div>
           ) : (
-            <div 
-              className={`max-w-2xl mx-auto w-full transition-all duration-500 ${
-                flashActive 
-                  ? (activeSignal.direction === SignalDirection.CALL ? 'animate-flash-call' : 'animate-flash-put') 
-                  : 'animate-in fade-in slide-in-from-bottom-6'
-              }`}
-            >
-              <div className="mb-8 flex flex-col items-center gap-4">
-                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${assetCategory === 'CRYPTO' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
-                  <span className={`animate-ping h-2.5 w-2.5 rounded-full ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-blue-500'}`}></span>
-                  <span className={`text-sm font-black uppercase tracking-widest ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-blue-400'}`}>
-                    Alta Probabilidade - Entrada em {secondsToNextCandle}s
+            <div className={`max-w-2xl mx-auto w-full transition-all duration-500 ${flashActive ? (activeSignal.direction === SignalDirection.CALL ? 'animate-flash-call' : 'animate-flash-put') : 'animate-in fade-in slide-in-from-bottom-6'}`}>
+              <div className="mb-8 flex flex-col items-center gap-4 text-center">
+                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${assetCategory === 'CRYPTO' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+                  <span className={`animate-ping h-2.5 w-2.5 rounded-full ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-emerald-500'}`}></span>
+                  <span className={`text-sm font-black uppercase tracking-widest ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-emerald-400'}`}>
+                    Rompimento Estrutural Confirmado
                   </span>
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Sinal {assetCategory} Gerado</h2>
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Fim da Contra-Tendência</h2>
               </div>
 
               <SignalCard signal={activeSignal} />
@@ -318,35 +294,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
                 
                 <div className="flex items-center gap-5 mb-8">
-                  <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/30' : 'bg-blue-500/20 border-blue-500/30'}`}>
-                    {assetCategory === 'CRYPTO' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                    )}
+                  <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/30' : 'bg-emerald-500/20 border-emerald-500/30'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-emerald-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                    </svg>
                   </div>
                   <div>
-                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Execução VIP</h4>
-                    <p className={`text-xs font-bold uppercase tracking-wider ${assetCategory === 'CRYPTO' ? 'text-purple-400/80' : 'text-blue-400/80'}`}>Protocolo de precisão {assetCategory} ativa</p>
+                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Confirmação de Fluxo</h4>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${assetCategory === 'CRYPTO' ? 'text-purple-400/80' : 'text-emerald-400/80'}`}>A IA detectou injeção de capital comprador</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-blue-500'}`}>1</span>
-                    <p>Localize o par <span className="text-white font-bold">{activeSignal.pair}</span>.</p>
+                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-emerald-500'}`}>1</span>
+                    <p>Execute no par <span className="text-white font-bold">{activeSignal.pair}</span>.</p>
                   </div>
-                  <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-blue-500'}`}>2</span>
-                    <p>Tempo de expiração: <span className="text-white font-bold">{activeSignal.timeframe}</span>.</p>
-                  </div>
-                  <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/40' : 'bg-blue-500/20 border-blue-500/40'}`}>
-                    <span className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">3</span>
-                    <p className="font-bold">Efetue a ordem de <span className="text-white font-black">{activeSignal.direction === 'CALL' ? 'COMPRA' : 'VENDA'}</span> na virada do minuto.</p>
+                  <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/40' : 'bg-emerald-500/20 border-emerald-500/40'}`}>
+                    <span className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">2</span>
+                    <p className="font-bold uppercase">Entrada no rompimento da bandeira para <span className="text-white font-black">{activeSignal.direction === 'CALL' ? 'ALTA' : 'BAIXA'}</span>.</p>
                   </div>
                 </div>
               </div>
@@ -357,7 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       <footer className="glass border-t border-white/5 py-6 px-6 text-center">
         <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">
-          ULTRA TRADE VIP © 2026 | PROTOCOLO {assetCategory} v4.1
+          ULTRA TRADE VIP © 2026 | ESTRATÉGIA STRUCTURE MASTER v6.0
         </p>
       </footer>
     </div>

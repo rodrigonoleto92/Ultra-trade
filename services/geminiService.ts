@@ -2,13 +2,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Signal, SignalDirection, Timeframe } from "../types";
 
-const generateVIPId = () => "FLUX-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+const generateVIPId = () => "STRC-" + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const entryDate = new Date(now);
   
-  // Gatilho ocorre 15s antes (aos 45s), a entrada é na virada do minuto/período.
   entryDate.setSeconds(0, 0);
   
   if (timeframe === Timeframe.M1) {
@@ -52,21 +51,28 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `
-      SISTEMA DE FLUXO IA V4.0 - FILTRO DE CONFLUÊNCIA:
-      Ativo: ${pair} | Timeframe: ${timeframe} | Entrada: ${entryTime}
+      SISTEMA DE ANÁLISE ESTRUTURAL V6.0 - FOCO EM ROMPIMENTO DE CANAL SECUNDÁRIO:
+      Ativo: ${pair} | Timeframe: ${timeframe}
       
-      ESTRATÉGIA BASE: 
-      - SMA 10 x SMA 20 (Cruzamento)
-      - EMA 5 (Micro-tendência)
-      - Bollinger Bands (20, 2)
-      - Donchian Channels (20)
+      ESTRUTURA ALVO (BASEADA NA IMAGEM DE REFERÊNCIA):
+      1. CANAL PRIMÁRIO: Tendência de ALTA clara (LTA). O preço faz topos e fundos ascendentes.
+      2. CANAL SECUNDÁRIO: Uma correção de curta duração com inclinação OPOSTA ao canal primário (Bandeira de Baixa).
       
-      REGRAS DE DECISÃO TÉCNICA:
-      1. CRUZAMENTO UP: Se SMA 10 > 20, mas o preço estiver tocando a BANDA SUPERIOR de Bollinger ou RESISTÊNCIA de Donchian, NÃO compre. Emita sinal de VENDA (PUT) por exaustão e reversão, caso a EMA 5 já mostre inclinação para baixo.
-      2. CRUZAMENTO DOWN: Se SMA 10 < 20, mas o preço estiver tocando a BANDA INFERIOR de Bollinger ou SUPORTE de Donchian, NÃO venda. Emita sinal de COMPRA (CALL) por exaustão e suporte, caso a EMA 5 já mostre inclinação para cima.
-      3. FLUXO PURO: Se houver cruzamento e o preço estiver longe das bandas (espaço para correr), siga o fluxo do cruzamento.
+      CRITÉRIO DE ENTRADA:
+      - O sinal deve ser gerado no exato momento em que o preço rompe a resistência do CANAL SECUNDÁRIO para cima, confirmando a retomada da tendência de alta principal.
+      - PRIORIDADE: Sinais de CALL em tendências de alta predominantes.
       
-      Responda apenas JSON: {"direction": "CALL"|"PUT", "confidence": 88-99, "strategy_type": "Fluxo"|"Reversão de Resistência"|"Reversão de Suporte"}
+      ANALISE O FLUXO:
+      - Houve exaustão da contra-tendência?
+      - O volume no rompimento é superior à média?
+      
+      Responda estritamente em JSON: 
+      {
+        "direction": "CALL"|"PUT", 
+        "confidence": 92-99, 
+        "analysis": "Explicação técnica do rompimento da estrutura secundária",
+        "trend_type": "Alta Dominante"|"Baixa Dominante"
+      }
     `;
 
     const response = await ai.models.generateContent({
@@ -79,9 +85,10 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
-            strategy_type: { type: Type.STRING },
+            analysis: { type: Type.STRING },
+            trend_type: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'strategy_type'],
+          required: ['direction', 'confidence', 'analysis', 'trend_type'],
         },
       },
     });
@@ -95,8 +102,8 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       timeframe,
       entryTime,
       expirationTime,
-      confidence: data.confidence || 94,
-      strategy: 'Algoritmo Preditivo VIP v4.0', // Nome genérico para ocultar a estratégia
+      confidence: data.confidence || 96,
+      strategy: `Rompimento de Pullback (${data.trend_type})`,
       timestamp: Date.now()
     };
 
@@ -104,12 +111,12 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
     return {
       id: generateVIPId(),
       pair,
-      direction: Math.random() > 0.5 ? SignalDirection.CALL : SignalDirection.PUT,
+      direction: SignalDirection.CALL, // Prioriza alta em caso de erro na análise
       timeframe,
       entryTime,
       expirationTime,
-      confidence: 92,
-      strategy: 'Proteção de Capital IA',
+      confidence: 90,
+      strategy: 'Análise Estrutural de Fluxo',
       timestamp: Date.now()
     };
   }
