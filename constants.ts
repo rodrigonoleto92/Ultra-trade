@@ -22,7 +22,16 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/GBP (OTC)', type: MarketType.OTC },
 ];
 
-export const ALL_PAIRS = [...FOREX_PAIRS, ...OTC_PAIRS];
+export const CRYPTO_OTC_PAIRS: CurrencyPair[] = [
+  { symbol: 'BTC/USD (OTC)', type: MarketType.CRYPTO_OTC },
+  { symbol: 'ETH/USD (OTC)', type: MarketType.CRYPTO_OTC },
+  { symbol: 'LTC/USD (OTC)', type: MarketType.CRYPTO_OTC },
+  { symbol: 'SOL/USD (OTC)', type: MarketType.CRYPTO_OTC },
+  { symbol: 'XRP/USD (OTC)', type: MarketType.CRYPTO_OTC },
+  { symbol: 'ADA/USD (OTC)', type: MarketType.CRYPTO_OTC },
+];
+
+export const ALL_PAIRS = [...FOREX_PAIRS, ...OTC_PAIRS, ...CRYPTO_OTC_PAIRS];
 
 export const TIMEFRAMES = [
   { label: 'M1', value: Timeframe.M1 },
@@ -30,13 +39,11 @@ export const TIMEFRAMES = [
   { label: 'M15', value: Timeframe.M15 },
 ];
 
-/**
- * Para adicionar novas senhas, basta colocar uma vírgula dentro dos colchetes
- * e adicionar a nova senha entre aspas. 
- * Exemplo: ['usuario2026', 'acesso_temporario', 'vip_premium']
- */
+// Configuração de verificação de licença externa
+export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
+
+// Senhas administrativas permanentes
 export const APP_PASSWORDS = [
-  'temp123', 
-  'ruan_vitalicio',
-  'admin_1992'
+  'admin_master_2026', 
+  'suporte_vip'
 ];

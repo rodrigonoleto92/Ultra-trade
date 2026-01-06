@@ -10,8 +10,11 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+type AssetCategory = 'MOEDAS' | 'CRYPTO';
+
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
+  const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -22,15 +25,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const lastTriggeredCandleRef = useRef<string>("");
 
   const isOTCOnlyTime = () => {
-    const day = currentTime.getDay(); // 0: Domingo, 6: Sábado
+    const day = currentTime.getDay(); 
     const hour = currentTime.getHours();
-    
-    // Sábado e Domingo: Sempre OTC
     if (day === 0 || day === 6) return true;
-    
-    // Segunda a Sexta: OTC das 16h às 04h
     if (hour >= 16 || hour < 4) return true;
-    
     return false;
   };
 
@@ -49,9 +47,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // GATILHO AUTOMÁTICO EXATAMENTE AOS 15 SEGUNDOS DO FIM DA VELA
       if (!isScanning && tfSeconds === 15) {
-        const triggerId = `${selectedTimeframe}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+        const triggerId = `${selectedTimeframe}-${assetCategory}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
         if (lastTriggeredCandleRef.current !== triggerId) {
           lastTriggeredCandleRef.current = triggerId;
           handleMultiPairScan();
@@ -59,7 +56,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, isScanning, currentTime]);
+  }, [selectedTimeframe, assetCategory, isScanning, currentTime]);
 
   const handleMultiPairScan = async () => {
     setIsScanning(true);
@@ -67,13 +64,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     
     try {
       const otcActive = isOTCOnlyTime();
-      const availablePairs = otcActive 
-        ? ALL_PAIRS.filter(p => p.type === MarketType.OTC)
-        : ALL_PAIRS;
+      let availablePairs = [];
+
+      if (assetCategory === 'CRYPTO') {
+        // Crypto é sempre OTC na maioria das plataformas
+        availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.CRYPTO_OTC);
+      } else {
+        // Moedas respeita o horário de mercado/OTC
+        availablePairs = otcActive 
+          ? ALL_PAIRS.filter(p => p.type === MarketType.OTC)
+          : ALL_PAIRS.filter(p => p.type === MarketType.FOREX);
+      }
 
       const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
       
-      // Simulação visual de alta performance
       for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
         setCurrentScanningPair({
           symbol: shuffledPairs[i].symbol,
@@ -116,9 +120,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             <Logo size="sm" />
             <div className="hidden md:flex flex-col border-l border-white/10 pl-6">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full animate-pulse ${otcActive ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-blue-500 shadow-[0_0_8px_#3b82f6]'}`}></span>
+                <span className={`h-2 w-2 rounded-full animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-purple-500 shadow-[0_0_8px_#a855f7]' : (otcActive ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-blue-500 shadow-[0_0_8px_#3b82f6]')}`}></span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  {isWeekend ? 'SCANNER WEEKEND OTC V4.1' : (otcActive ? 'SCANNER OTC V4.1' : 'SCANNER GLOBAL V4.1')}
+                  {assetCategory === 'CRYPTO' ? 'SCANNER CRYPTO OTC V4.1' : (isWeekend ? 'SCANNER WEEKEND OTC V4.1' : (otcActive ? 'SCANNER OTC V4.1' : 'SCANNER GLOBAL V4.1'))}
                 </span>
               </div>
             </div>
@@ -141,7 +145,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             <button 
               onClick={onLogout}
               className="group flex items-center gap-2 py-2 px-4 rounded-xl border border-white/5 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all duration-300"
-              title="Sair do Terminal"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500 group-hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -157,9 +160,41 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
             <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Parâmetros</h2>
             
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Timeframe de Operação</label>
+                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Tipo de Ativos</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setAssetCategory('MOEDAS');
+                      setActiveSignal(null);
+                    }}
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border flex items-center justify-center gap-2 ${
+                      assetCategory === 'MOEDAS'
+                        ? 'logo-gradient-bg border-transparent text-slate-900 shadow-lg'
+                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    MOEDAS
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAssetCategory('CRYPTO');
+                      setActiveSignal(null);
+                    }}
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border flex items-center justify-center gap-2 ${
+                      assetCategory === 'CRYPTO'
+                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 border-transparent text-white shadow-lg shadow-purple-500/20'
+                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    CRYPTO OTC
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Timeframe</label>
                 <div className="grid grid-cols-3 gap-2">
                   {TIMEFRAMES.map(tf => (
                     <button
@@ -170,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       }}
                       className={`py-3 rounded-xl text-xs font-black transition-all border ${
                         selectedTimeframe === tf.value
-                          ? 'logo-gradient-bg border-transparent text-slate-900'
+                          ? 'logo-gradient-bg border-transparent text-slate-900 shadow-md'
                           : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
                       }`}
                     >
@@ -181,39 +216,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               </div>
 
               <div className="bg-blue-500/5 rounded-2xl p-4 border border-blue-500/10">
-                <p className="text-[10px] text-blue-400 font-black uppercase mb-3 tracking-widest">Sincronização</p>
+                <p className="text-[10px] text-blue-400 font-black uppercase mb-2 tracking-widest">Inteligência</p>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                  Entrada VIP: Sinal liberado faltando <span className="text-white font-bold">15 segundos</span> para o fim da vela.
+                  {assetCategory === 'CRYPTO' 
+                    ? 'Analisando volume de baleias e padrões de exaustão em redes descentralizadas.' 
+                    : 'Monitorando fluxos institucionais e correlação de moedas em tempo real.'}
                 </p>
-              </div>
-
-              <div className="bg-slate-900/50 rounded-2xl p-4 border border-white/5">
-                <p className="text-[10px] text-slate-500 font-bold uppercase mb-2 tracking-widest">Status do Terminal</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] text-emerald-500 font-black flex items-center gap-1 uppercase">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                    Sincronizado
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-black uppercase">v4.1 VIP</span>
-                </div>
               </div>
             </div>
           </div>
 
           <div className="glass p-6 rounded-3xl border border-white/5 bg-gradient-to-b from-transparent to-blue-500/5">
-            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Cronograma IA</h2>
+            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Agenda do Mercado</h2>
             <div className="space-y-4">
-               <div className={`p-3 rounded-xl border ${isWeekend ? 'bg-amber-500/20 border-amber-500/50' : 'bg-slate-800/40 border-white/5 opacity-50'}`}>
-                 <p className="text-[10px] text-white font-bold uppercase mb-1">Sáb e Dom (Full OTC)</p>
-                 <p className="text-[9px] text-slate-400 uppercase font-medium">100% de Atividade OTC</p>
+               <div className={`p-3 rounded-xl border ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/50' : 'bg-slate-800/40 border-white/5 opacity-40'}`}>
+                 <p className="text-[10px] text-white font-bold uppercase mb-1">Cripto (24/7 OTC)</p>
+                 <p className="text-[9px] text-slate-400 uppercase font-medium">Atividade ininterrupta</p>
                </div>
-               <div className={`p-3 rounded-xl border ${!isWeekend && otcActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-800/40 border-white/5'}`}>
-                 <p className="text-[10px] text-white font-bold uppercase mb-1">Seg a Sex (16h - 04h)</p>
-                 <p className="text-[9px] text-slate-400 uppercase font-medium">Apenas Mercado OTC</p>
-               </div>
-               <div className={`p-3 rounded-xl border ${!isWeekend && !otcActive ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/40 border-white/5'}`}>
-                 <p className="text-[10px] text-white font-bold uppercase mb-1">Seg a Sex (04h - 16h)</p>
-                 <p className="text-[9px] text-slate-400 uppercase font-medium">Mercado Aberto + OTC</p>
+               <div className={`p-3 rounded-xl border ${assetCategory === 'MOEDAS' && (isWeekend || otcActive) ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-800/40 border-white/5 opacity-40'}`}>
+                 <p className="text-[10px] text-white font-bold uppercase mb-1">Moedas (OTC Ativo)</p>
+                 <p className="text-[9px] text-slate-400 uppercase font-medium">Finais de semana e Noites</p>
                </div>
             </div>
           </div>
@@ -222,16 +244,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <div className="lg:col-span-3">
           {!activeSignal ? (
             <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
-              {isScanning && <div className="absolute inset-0 bg-blue-500/10 animate-pulse"></div>}
+              {isScanning && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-purple-500/10' : 'bg-blue-500/10'}`}></div>}
               <div className="relative z-10 flex flex-col items-center w-full">
                 <div className={`mb-10 transition-all ${isScanning ? 'scale-110' : 'opacity-20'}`}>
                   {isScanning ? (
                     <div className="relative h-32 w-32 flex items-center justify-center mx-auto">
-                      <div className={`absolute inset-0 border-4 rounded-full border-blue-500/10`}></div>
-                      <div className={`absolute inset-0 border-4 border-t-blue-500 rounded-full animate-spin`}></div>
+                      <div className={`absolute inset-0 border-4 rounded-full ${assetCategory === 'CRYPTO' ? 'border-purple-500/10' : 'border-blue-500/10'}`}></div>
+                      <div className={`absolute inset-0 border-4 rounded-full animate-spin ${assetCategory === 'CRYPTO' ? 'border-t-purple-500' : 'border-t-blue-500'}`}></div>
                       <div className="flex flex-col items-center">
-                        <span className="text-xs font-black text-blue-400 leading-none">{currentScanningPair?.symbol}</span>
-                        <span className="text-[8px] text-slate-500 font-bold uppercase mt-1">Sincronizando...</span>
+                        <span className={`text-xs font-black leading-none ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-blue-400'}`}>{currentScanningPair?.symbol}</span>
+                        <span className="text-[8px] text-slate-500 font-bold uppercase mt-1">Deep Analysis...</span>
                       </div>
                     </div>
                   ) : (
@@ -245,23 +267,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 
                 <div className="max-w-md w-full">
                   <h3 className="text-3xl font-black text-white mb-6 tracking-tighter uppercase">
-                    {isScanning ? 'Ajustando Confluência...' : 'Aguardando sinal da IA'}
+                    {isScanning ? 'Processando Redes...' : `Aguardando ${assetCategory.toLowerCase()}`}
                   </h3>
                   
-                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${secondsToNextCandle <= 20 ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'bg-slate-900/40 border-white/5'}`}>
+                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${secondsToNextCandle <= 20 ? (assetCategory === 'CRYPTO' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-blue-500/10 border-blue-500/30') : 'bg-slate-900/40 border-white/5'}`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
                       {secondsToNextCandle > 15 
-                        ? `A IA iniciará a análise nos 15 segundos finais da vela de ${selectedTimeframe}.`
-                        : `Processando volume e padrões de exaustão... Fique atento.`}
+                        ? `A IA iniciará o rastreamento aos 15 segundos finais da vela ${selectedTimeframe}.`
+                        : `Sinal iminente. Filtrando ruído de mercado para ${assetCategory === 'CRYPTO' ? 'OTC Cripto' : 'Moedas'}.`}
                     </p>
                   </div>
 
                   {!isScanning && (
                     <div className="flex flex-col items-center gap-4">
-                       <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Monitoramento Ativo {otcActive ? '(OTC)' : '(Mercado Aberto)'}</span>
+                       <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Monitor {assetCategory} Ativo</span>
                        <div className="w-48 h-1 bg-slate-900 rounded-full overflow-hidden">
                          <div 
-                          className="h-full bg-blue-500 transition-all duration-1000 ease-linear shadow-[0_0_8px_#3b82f6]"
+                          className={`h-full transition-all duration-1000 ease-linear shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-purple-500 shadow-purple-500/50' : 'bg-blue-500 shadow-blue-500/50'}`}
                           style={{ width: `${(60 - secondsToNextCandle) * 1.66}%` }}
                          ></div>
                        </div>
@@ -279,13 +301,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               }`}
             >
               <div className="mb-8 flex flex-col items-center gap-4">
-                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]`}>
-                  <span className="animate-ping h-2.5 w-2.5 rounded-full bg-blue-500"></span>
-                  <span className="text-sm font-black uppercase tracking-widest text-blue-400">
-                    Oportunidade Confirmada - Entre em {secondsToNextCandle}s
+                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${assetCategory === 'CRYPTO' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
+                  <span className={`animate-ping h-2.5 w-2.5 rounded-full ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-blue-500'}`}></span>
+                  <span className={`text-sm font-black uppercase tracking-widest ${assetCategory === 'CRYPTO' ? 'text-purple-400' : 'text-blue-400'}`}>
+                    Alta Probabilidade - Entrada em {secondsToNextCandle}s
                   </span>
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Sinal Processado</h2>
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Sinal {assetCategory} Gerado</h2>
               </div>
 
               <SignalCard signal={activeSignal} />
@@ -296,29 +318,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
                 
                 <div className="flex items-center gap-5 mb-8">
-                  <div className="h-14 w-14 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30 shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
+                  <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/30' : 'bg-blue-500/20 border-blue-500/30'}`}>
+                    {assetCategory === 'CRYPTO' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    )}
                   </div>
                   <div>
-                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Ação Requerida</h4>
-                    <p className="text-xs text-blue-400/80 font-bold uppercase tracking-wider">Execute na virada exata do cronômetro</p>
+                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Execução VIP</h4>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${assetCategory === 'CRYPTO' ? 'text-purple-400/80' : 'text-blue-400/80'}`}>Protocolo de precisão {assetCategory} ativa</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <span className="h-8 w-8 rounded-full bg-blue-500 text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md">1</span>
-                    <p>Abra o par <span className="text-white font-bold">{activeSignal.pair}</span> na plataforma.</p>
+                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-blue-500'}`}>1</span>
+                    <p>Localize o par <span className="text-white font-bold">{activeSignal.pair}</span>.</p>
                   </div>
                   <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <span className="h-8 w-8 rounded-full bg-blue-500 text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md">2</span>
-                    <p>Ajuste para expiração de <span className="text-white font-bold">{activeSignal.timeframe}</span>.</p>
+                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${assetCategory === 'CRYPTO' ? 'bg-purple-500' : 'bg-blue-500'}`}>2</span>
+                    <p>Tempo de expiração: <span className="text-white font-bold">{activeSignal.timeframe}</span>.</p>
                   </div>
-                  <div className="flex gap-5 text-sm text-slate-200 items-center bg-blue-500/20 p-5 rounded-2xl border border-blue-500/40 shadow-xl">
-                    <span className="h-8 w-8 rounded-full bg-white text-blue-600 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">3</span>
-                    <p className="font-bold">Clique em <span className="text-white font-black">{activeSignal.direction === 'CALL' ? 'COMPRA' : 'VENDA'}</span> às <span className="text-white font-black">{activeSignal.entryTime}</span>.</p>
+                  <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${assetCategory === 'CRYPTO' ? 'bg-purple-500/20 border-purple-500/40' : 'bg-blue-500/20 border-blue-500/40'}`}>
+                    <span className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">3</span>
+                    <p className="font-bold">Efetue a ordem de <span className="text-white font-black">{activeSignal.direction === 'CALL' ? 'COMPRA' : 'VENDA'}</span> na virada do minuto.</p>
                   </div>
                 </div>
               </div>
@@ -329,7 +357,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       <footer className="glass border-t border-white/5 py-6 px-6 text-center">
         <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">
-          ULTRA TRADE VIP © 2026 | PROTOCOLO DE ALTA FIDELIDADE v4.1
+          ULTRA TRADE VIP © 2026 | PROTOCOLO {assetCategory} v4.1
         </p>
       </footer>
     </div>

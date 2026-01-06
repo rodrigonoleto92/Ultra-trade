@@ -1,7 +1,8 @@
 
 export enum MarketType {
   FOREX = 'Forex',
-  OTC = 'OTC'
+  OTC = 'OTC',
+  CRYPTO_OTC = 'Crypto OTC'
 }
 
 export enum SignalDirection {
