@@ -37,6 +37,6 @@ export const TIMEFRAMES = [
  */
 export const APP_PASSWORDS = [
   'temp123', 
-  'trade99',
-  'ruan_vitalicio'
+  'ruan_vitalicio',
+  'admin_1992'
 ];
