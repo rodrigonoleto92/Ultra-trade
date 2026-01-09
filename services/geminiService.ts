@@ -2,13 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Signal, SignalDirection, Timeframe } from "../types";
 
-const generateVIPId = () => "REAL-HFT-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+const generateVIPId = () => "SNIPER-" + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const entryDate = new Date(now);
   
-  // O sinal é gerado para a PRÓXIMA vela
+  // O sinal é gerado para a PRÓXIMA vela (abertura em 00s)
   entryDate.setSeconds(0, 0);
   entryDate.setMinutes(now.getMinutes() + 1);
 
@@ -34,30 +34,28 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
   return { entryTime, expirationTime };
 };
 
-export async function generateSignal(pair: string, timeframe: Timeframe): Promise<Signal> {
+export async function generateSignal(pair: string, timeframe: Timeframe, isOTC: boolean): Promise<Signal> {
   const { entryTime, expirationTime } = calculateTradeTimes(timeframe);
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `
-      IA ANALYST V10.0 - MERCADO REAL E ESTRUTURA HFT:
+      IA ESTRATÉGICA V11.0 - ${isOTC ? 'MERCADO OTC' : 'MERCADO REAL'}:
       Ativo: ${pair} | Timeframe: ${timeframe}
       
-      ESTRATÉGIA DE PRECISÃO:
-      1. MERCADO REAL: Analise o fluxo de dados em tempo real (não simular comportamento OTC se o ativo for real).
-      2. ROMPIMENTO DE BANDEIRA MENOR: Identifique uma pequena bandeira (correção de 2-4 candles) contra a tendência mestre.
-      3. TENDÊNCIA MAIOR: Só gere sinal de CALL se a tendência maior for ALTA. Só gere sinal de PUT se for BAIXA.
-      4. SUPORTE/RESISTÊNCIA: Verifique se há barreiras imediatas que possam causar reversão. O sinal só é válido se o caminho estiver livre.
-      
-      OBJETIVO: Entrada na abertura da vela de ${entryTime}.
+      PROTOCOLO SNIPER:
+      1. TIPO DE MERCADO: ${isOTC ? 'Analise algoritmos de corretora (OTC) buscando padrões de repetição e reversão em micro-bandeiras.' : 'Analise fluxo real de liquidez e rompimentos de estruturas de preço reais.'}
+      2. MICRO-BANDEIRA: Identifique correções curtas de 2-4 candles.
+      3. GATILHO DE PRECISÃO: O sinal deve prever o rompimento na abertura da vela de ${entryTime}.
+      4. FILTRO DE ASSERTIVIDADE: Recuse o sinal se houver suporte/resistência imediato impedindo o movimento.
       
       Responda estritamente em JSON: 
       {
         "direction": "CALL"|"PUT", 
-        "confidence": 97-99, 
-        "analysis": "Rompimento de micro-bandeira detectado com suporte em zona de liquidez real.",
-        "market_context": "Real-Time Flux"
+        "confidence": 96-99, 
+        "analysis": "Explicação técnica curta do rompimento.",
+        "context": "${isOTC ? 'Algoritmo OTC' : 'Fluxo Real'}"
       }
     `;
 
@@ -72,9 +70,9 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
             analysis: { type: Type.STRING },
-            market_context: { type: Type.STRING },
+            context: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'analysis', 'market_context'],
+          required: ['direction', 'confidence', 'analysis', 'context'],
         },
       },
     });
@@ -89,7 +87,7 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       entryTime,
       expirationTime,
       confidence: data.confidence || 98,
-      strategy: `Flag Breakout + S/R Real (${data.market_context})`,
+      strategy: `${data.context} Breakout`,
       timestamp: Date.now()
     };
 
@@ -102,7 +100,7 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       entryTime,
       expirationTime,
       confidence: 90,
-      strategy: 'Real-Time Recovery',
+      strategy: 'HFT Emergency Analysis',
       timestamp: Date.now()
     };
   }

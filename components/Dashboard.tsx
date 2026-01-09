@@ -18,7 +18,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [pendingSignal, setPendingSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isPreparing, setIsPreparing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
   const [flashActive, setFlashActive] = useState(false);
@@ -26,12 +25,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   
   const lastTriggeredCandleRef = useRef<string>("");
 
-  const isOTCOnlyTime = () => {
+  // LÓGICA DE HORÁRIO: 04:00 até 16:00 Mercado Real, fora disso OTC. Sáb/Dom sempre OTC.
+  const isForexRealMarket = () => {
     const day = currentTime.getDay(); 
     const hour = currentTime.getHours();
-    if (day === 0 || day === 6) return true;
-    if (hour >= 16 || hour < 4) return true;
-    return false;
+    const isWeekend = day === 0 || day === 6;
+    if (isWeekend) return false;
+    return (hour >= 4 && hour < 16);
   };
 
   useEffect(() => {
@@ -49,15 +49,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // --- LOGICA DE PRECISÃO EXTREMA ---
+      // --- LOGICA SNIPER V11.0 ---
       
-      // 1. Limpa sinal na virada exata (00s)
+      // 1. Limpa sinal na virada exata da vela (00s)
       if (tfSeconds >= 59) {
         setActiveSignal(null);
         setPendingSignal(null);
       }
 
-      // 2. Inicia Escaneamento aos 25 segundos restantes para dar tempo da IA ler e responder
+      // 2. Inicia Escaneamento aos 25 segundos restantes (Análise de 1 min)
       if (!isScanning && tfSeconds === 25) {
         const triggerId = `${selectedTimeframe}-${assetCategory}-${now.getHours()}-${now.getMinutes()}`;
         if (lastTriggeredCandleRef.current !== triggerId) {
@@ -80,23 +80,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const handleScanAndBuffer = async () => {
     setIsScanning(true);
-    setIsPreparing(true);
     
     try {
-      const otcActive = isOTCOnlyTime();
+      const forexIsReal = isForexRealMarket();
       let availablePairs = [];
 
       if (assetCategory === 'CRYPTO') {
+        // Cripto é sempre Real (conforme pedido anterior)
         availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.CRYPTO);
       } else {
-        availablePairs = otcActive 
-          ? ALL_PAIRS.filter(p => p.type === MarketType.OTC)
-          : ALL_PAIRS.filter(p => p.type === MarketType.FOREX);
+        // Forex decide entre OTC e REAL baseado no horário
+        availablePairs = forexIsReal 
+          ? ALL_PAIRS.filter(p => p.type === MarketType.FOREX)
+          : ALL_PAIRS.filter(p => p.type === MarketType.OTC);
       }
 
       const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
       
-      // Simulação de leitura profunda de candles em 1 min
+      // Simulação visual de análise de estrutura
       for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
         setCurrentScanningPair({
           symbol: shuffledPairs[i].symbol,
@@ -107,17 +108,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       if (shuffledPairs.length > 0) {
         const winnerPair = shuffledPairs[0].symbol;
-        const newSignal = await generateSignal(winnerPair, selectedTimeframe);
+        const newSignal = await generateSignal(
+          winnerPair, 
+          selectedTimeframe, 
+          assetCategory === 'MOEDAS' ? !forexIsReal : false
+        );
         
-        // Mantém em buffer até atingir os 15 segundos no cronômetro
         setPendingSignal(newSignal);
       }
       
     } catch (err) {
-      console.error("Erro no processamento de sinal:", err);
+      console.error("Erro no processamento:", err);
     } finally {
       setIsScanning(false);
-      setIsPreparing(false);
       setCurrentScanningPair(null);
     }
   };
@@ -128,8 +131,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const otcActive = isOTCOnlyTime();
-  const isWeekend = currentTime.getDay() === 0 || currentTime.getDay() === 6;
+  const forexIsReal = isForexRealMarket();
+  const currentMarketLabel = assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsReal ? 'MERCADO REAL ABERTO' : 'MERCADO EM OTC');
+  const marketStatusColor = assetCategory === 'CRYPTO' || forexIsReal ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' : 'text-amber-400 border-amber-500/30 bg-amber-500/5';
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col">
@@ -139,9 +143,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             <Logo size="sm" />
             <div className="hidden md:flex flex-col border-l border-white/10 pl-6">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500 shadow-[0_0_8px_#f97316]' : (otcActive ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]')}`}></span>
+                <span className={`h-2 w-2 rounded-full animate-pulse ${assetCategory === 'CRYPTO' || forexIsReal ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  {assetCategory === 'CRYPTO' ? 'IA REAL-TIME CRYPTO v10.0' : (isWeekend ? 'IA PRECISION WEEKEND v10.0' : (otcActive ? 'IA PRECISION OTC v10.0' : 'IA PRECISION GLOBAL v10.0'))}
+                  IA ESTRATÉGICA VIP v11.0
                 </span>
               </div>
             </div>
@@ -152,13 +156,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <p className="text-xl font-mono font-bold text-white tracking-tighter">
                 {currentTime.toLocaleTimeString('pt-BR')}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Tempo Atual</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Global Time</p>
             </div>
             <div className="text-right border-r border-white/10 pr-4 sm:pr-8">
               <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 15 ? 'text-blue-500 animate-pulse' : 'logo-gradient-text'}`}>
                 {formatTime(secondsToNextCandle)}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Contagem M1</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Próxima Vela</p>
             </div>
             
             <button 
@@ -176,12 +180,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside className="lg:col-span-1 space-y-6">
+          {/* Status do Mercado */}
+          <div className={`p-5 rounded-2xl border ${marketStatusColor} transition-all duration-500`}>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-60">Status do Sistema</p>
+            <h3 className="text-lg font-black uppercase tracking-tighter">{currentMarketLabel}</h3>
+            {assetCategory === 'MOEDAS' && (
+              <p className="text-[9px] font-bold uppercase mt-2 opacity-50">Forex Real: 04:00 às 16:00 BRT</p>
+            )}
+          </div>
+
           <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Seletor de Mercado</h2>
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Seleção de Ativos</h2>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Ativos</label>
+                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Mercado</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => {
@@ -215,7 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Período de Vela</label>
+                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Timeframe</label>
                 <div className="grid grid-cols-3 gap-2">
                   {TIMEFRAMES.map(tf => (
                     <button
@@ -236,13 +249,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   ))}
                 </div>
               </div>
-
-              <div className="bg-orange-500/5 rounded-2xl p-4 border border-orange-500/10">
-                <p className="text-[10px] text-orange-400 font-black uppercase mb-2 tracking-widest">Protocolo Real-Time</p>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                  Ativos de cripto analisados em mercado real. Sinal exibido fixamente aos 15s para entrada sniper.
-                </p>
-              </div>
             </div>
           </div>
         </aside>
@@ -250,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <div className="lg:col-span-3">
           {!activeSignal ? (
             <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
-              {(isScanning || isPreparing || (pendingSignal && secondsToNextCandle > 15)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-emerald-500/10'}`}></div>}
+              {(isScanning || (pendingSignal && secondsToNextCandle > 15)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-emerald-500/10'}`}></div>}
               <div className="relative z-10 flex flex-col items-center w-full">
                 <div className={`mb-10 transition-all ${(isScanning || pendingSignal) ? 'scale-110' : 'opacity-20'}`}>
                   {isScanning || (pendingSignal && secondsToNextCandle > 15) ? (
@@ -279,15 +285,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${secondsToNextCandle <= 25 ? (assetCategory === 'CRYPTO' ? 'bg-orange-500/10 border-orange-500/30' : 'bg-emerald-500/10 border-emerald-500/30') : 'bg-slate-900/40 border-white/5'}`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
                       {secondsToNextCandle > 25 
-                        ? `Aguardando a zona de exaustão da vela de 1 min para iniciar escaneamento.`
+                        ? `Aguardando o momento ideal da vela de 1 min. O escaneamento sniper inicia aos 25s.`
                         : pendingSignal 
-                          ? `ANÁLISE ESTRUTURAL COMPLETA! Liberando sinal em ${secondsToNextCandle - 15}s...`
-                          : `IA BUSCANDO ENTRADA VIP: Analisando micro-bandeiras em ativos reais.`}
+                          ? `ESTRUTURA CONFIRMADA! Liberando sinal em ${secondsToNextCandle - 15}s...`
+                          : `IA BUSCANDO ENTRADA VIP: Analisando rompimentos no ${currentMarketLabel}.`}
                     </p>
                   </div>
 
                   <div className="flex flex-col items-center gap-4">
-                      <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Monitoramento de Ativos Reais</span>
+                      <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Monitoramento Ativo</span>
                       <div className="w-48 h-1 bg-slate-900 rounded-full overflow-hidden">
                         <div 
                         className={`h-full transition-all duration-1000 ease-linear shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-orange-500 shadow-orange-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`}
@@ -304,10 +310,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10 border-orange-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
                   <span className={`animate-ping h-2.5 w-2.5 rounded-full ${assetCategory === 'CRYPTO' ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
                   <span className={`text-sm font-black uppercase tracking-widest ${assetCategory === 'CRYPTO' ? 'text-orange-400' : 'text-emerald-400'}`}>
-                    SINAL CONFIRMADO EM MERCADO REAL
+                    {activeSignal.strategy}
                   </span>
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Rompimento Identificado</h2>
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Preparar Ordem M1</h2>
               </div>
 
               <SignalCard signal={activeSignal} />
@@ -324,7 +330,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Gatilho v10.0</h4>
+                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Gatilho v11.0</h4>
                     <p className={`text-xs font-bold uppercase tracking-wider ${assetCategory === 'CRYPTO' ? 'text-orange-400/80' : 'text-emerald-400/80'}`}>Execute na virada exata para o próximo minuto</p>
                   </div>
                 </div>
@@ -347,7 +353,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       <footer className="glass border-t border-white/5 py-6 px-6 text-center">
         <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">
-          ULTRA TRADE VIP © 2026 | ESTRATÉGIA REAL-PRECISION v10.0
+          ULTRA TRADE VIP © 2026 | ESTRATÉGIA REAL-PRECISION v11.0
         </p>
       </footer>
     </div>
