@@ -1,14 +1,13 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Signal, SignalDirection, Timeframe } from "../types";
+import { Signal, SignalDirection, Timeframe, SignalType } from "../types";
 
-const generateVIPId = () => "SNIPER-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNIPER' : 'FX'}-` + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const entryDate = new Date(now);
   
-  // O sinal é gerado para a PRÓXIMA vela (abertura em 00s)
   entryDate.setSeconds(0, 0);
   entryDate.setMinutes(now.getMinutes() + 1);
 
@@ -34,30 +33,40 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
   return { entryTime, expirationTime };
 };
 
-export async function generateSignal(pair: string, timeframe: Timeframe, isOTC: boolean): Promise<Signal> {
+export async function generateSignal(
+  pair: string, 
+  timeframe: Timeframe, 
+  isOTC: boolean,
+  type: SignalType = SignalType.BINARY
+): Promise<Signal> {
   const { entryTime, expirationTime } = calculateTradeTimes(timeframe);
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const prompt = `
-      IA ESTRATÉGICA V11.0 - ${isOTC ? 'MERCADO OTC' : 'MERCADO REAL'}:
-      Ativo: ${pair} | Timeframe: ${timeframe}
-      
-      PROTOCOLO SNIPER:
-      1. TIPO DE MERCADO: ${isOTC ? 'Analise algoritmos de corretora (OTC) buscando padrões de repetição e reversão em micro-bandeiras.' : 'Analise fluxo real de liquidez e rompimentos de estruturas de preço reais.'}
-      2. MICRO-BANDEIRA: Identifique correções curtas de 2-4 candles.
-      3. GATILHO DE PRECISÃO: O sinal deve prever o rompimento na abertura da vela de ${entryTime}.
-      4. FILTRO DE ASSERTIVIDADE: Recuse o sinal se houver suporte/resistência imediato impedindo o movimento.
-      
-      Responda estritamente em JSON: 
-      {
-        "direction": "CALL"|"PUT", 
-        "confidence": 96-99, 
-        "analysis": "Explicação técnica curta do rompimento.",
-        "context": "${isOTC ? 'Algoritmo OTC' : 'Fluxo Real'}"
-      }
-    `;
+    const prompt = type === SignalType.BINARY 
+      ? `IA ESTRATÉGICA V12.1 - OPÇÕES BINÁRIAS - ${isOTC ? 'MERCADO OTC' : 'MERCADO REAL'}:
+         Ativo: ${pair} | Timeframe: ${timeframe}
+         Estratégia: Rompimento de Micro-Bandeira M1.
+         Gere sinal para abertura de vela das ${entryTime}.
+         Responda em JSON rigoroso: 
+         { 
+           "direction": "CALL"|"PUT", 
+           "confidence": 96-99, 
+           "analysis": "Explicação técnica curta do rompimento." 
+         }`
+      : `IA ESTRATÉGICA V12.1 - FOREX TRADING ESTRUTURAL:
+         Ativo: ${pair} | Timeframe: ${timeframe}
+         Identifique uma entrada baseada em SMC (Smart Money Concepts) ou Price Action.
+         Responda em JSON rigoroso: 
+         { 
+           "direction": "CALL"|"PUT", 
+           "confidence": 93-98, 
+           "entryPrice": "Preço exato ou Mkt",
+           "stopLoss": "Preço de proteção técnico",
+           "takeProfit": "Preço de alvo 1:3",
+           "analysis": "Padrão de reversão/continuidade identificado" 
+         }`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -70,9 +79,11 @@ export async function generateSignal(pair: string, timeframe: Timeframe, isOTC: 
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
             analysis: { type: Type.STRING },
-            context: { type: Type.STRING },
+            entryPrice: { type: Type.STRING },
+            stopLoss: { type: Type.STRING },
+            takeProfit: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'analysis', 'context'],
+          required: ['direction', 'confidence', 'analysis'],
         },
       },
     });
@@ -80,27 +91,35 @@ export async function generateSignal(pair: string, timeframe: Timeframe, isOTC: 
     const data = JSON.parse(response.text || '{}');
 
     return {
-      id: generateVIPId(),
+      id: generateVIPId(type),
       pair,
+      type,
       direction: (data.direction as SignalDirection) || SignalDirection.CALL,
       timeframe,
-      entryTime,
-      expirationTime,
-      confidence: data.confidence || 98,
-      strategy: `${data.context} Breakout`,
+      entryTime: type === SignalType.BINARY ? entryTime : undefined,
+      expirationTime: type === SignalType.BINARY ? expirationTime : undefined,
+      entryPrice: type === SignalType.FOREX ? data.entryPrice : 'Mkt Price',
+      stopLoss: type === SignalType.FOREX ? data.stopLoss : 'N/A',
+      takeProfit: type === SignalType.FOREX ? data.takeProfit : 'N/A',
+      confidence: data.confidence || 95,
+      strategy: data.analysis || `${type} Strategy`,
       timestamp: Date.now()
     };
 
   } catch (error: any) {
     return {
-      id: generateVIPId(),
+      id: generateVIPId(type),
       pair,
+      type,
       direction: SignalDirection.CALL,
       timeframe,
-      entryTime,
-      expirationTime,
-      confidence: 90,
-      strategy: 'HFT Emergency Analysis',
+      entryTime: type === SignalType.BINARY ? entryTime : undefined,
+      expirationTime: type === SignalType.BINARY ? expirationTime : undefined,
+      entryPrice: 'Mkt',
+      stopLoss: 'Auto',
+      takeProfit: 'Auto',
+      confidence: 85,
+      strategy: 'Fallback Analysis System',
       timestamp: Date.now()
     };
   }

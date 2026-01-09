@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ALL_PAIRS, TIMEFRAMES } from '../constants';
-import { Signal, Timeframe, SignalDirection, MarketType } from '../types';
+import { Signal, Timeframe, SignalDirection, MarketType, SignalType } from '../types';
 import { generateSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
@@ -15,6 +15,7 @@ type AssetCategory = 'MOEDAS' | 'CRYPTO';
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
+  const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [pendingSignal, setPendingSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -25,7 +26,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   
   const lastTriggeredCandleRef = useRef<string>("");
 
-  // LÓGICA DE HORÁRIO: 04:00 até 16:00 Mercado Real, fora disso OTC. Sáb/Dom sempre OTC.
   const isForexRealMarket = () => {
     const day = currentTime.getDay(); 
     const hour = currentTime.getHours();
@@ -49,17 +49,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // --- LOGICA SNIPER V11.0 ---
+      // --- LOGICA SNIPER ---
       
-      // 1. Limpa sinal na virada exata da vela (00s)
-      if (tfSeconds >= 59) {
+      // 1. Limpa sinal de OB na virada exata
+      if (tfSeconds >= 59 && signalType === SignalType.BINARY) {
         setActiveSignal(null);
         setPendingSignal(null);
       }
 
-      // 2. Inicia Escaneamento aos 25 segundos restantes (Análise de 1 min)
+      // 2. Inicia Escaneamento aos 25 segundos restantes
+      const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
       if (!isScanning && tfSeconds === 25) {
-        const triggerId = `${selectedTimeframe}-${assetCategory}-${now.getHours()}-${now.getMinutes()}`;
         if (lastTriggeredCandleRef.current !== triggerId) {
           lastTriggeredCandleRef.current = triggerId;
           handleScanAndBuffer();
@@ -76,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, assetCategory, isScanning, currentTime, pendingSignal]);
+  }, [selectedTimeframe, assetCategory, signalType, isScanning, currentTime, pendingSignal]);
 
   const handleScanAndBuffer = async () => {
     setIsScanning(true);
@@ -86,10 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       let availablePairs = [];
 
       if (assetCategory === 'CRYPTO') {
-        // Cripto é sempre Real (conforme pedido anterior)
         availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.CRYPTO);
       } else {
-        // Forex decide entre OTC e REAL baseado no horário
         availablePairs = forexIsReal 
           ? ALL_PAIRS.filter(p => p.type === MarketType.FOREX)
           : ALL_PAIRS.filter(p => p.type === MarketType.OTC);
@@ -97,7 +95,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
       
-      // Simulação visual de análise de estrutura
       for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
         setCurrentScanningPair({
           symbol: shuffledPairs[i].symbol,
@@ -111,7 +108,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         const newSignal = await generateSignal(
           winnerPair, 
           selectedTimeframe, 
-          assetCategory === 'MOEDAS' ? !forexIsReal : false
+          assetCategory === 'MOEDAS' ? !forexIsReal : false,
+          signalType
         );
         
         setPendingSignal(newSignal);
@@ -145,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full animate-pulse ${assetCategory === 'CRYPTO' || forexIsReal ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  IA ESTRATÉGICA VIP v11.0
+                  IA MULTI-TRADE VIP v12.1
                 </span>
               </div>
             </div>
@@ -162,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 15 ? 'text-blue-500 animate-pulse' : 'logo-gradient-text'}`}>
                 {formatTime(secondsToNextCandle)}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Próxima Vela</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Vela Atual</p>
             </div>
             
             <button 
@@ -180,7 +178,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside className="lg:col-span-1 space-y-6">
-          {/* Status do Mercado */}
           <div className={`p-5 rounded-2xl border ${marketStatusColor} transition-all duration-500`}>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-60">Status do Sistema</p>
             <h3 className="text-lg font-black uppercase tracking-tighter">{currentMarketLabel}</h3>
@@ -190,11 +187,45 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           </div>
 
           <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Seleção de Ativos</h2>
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Configurações</h2>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Mercado</label>
+                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Operação</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setSignalType(SignalType.BINARY);
+                      setActiveSignal(null);
+                      setPendingSignal(null);
+                    }}
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
+                      signalType === SignalType.BINARY
+                        ? 'logo-gradient-bg border-transparent text-slate-900 shadow-lg'
+                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    BINÁRIAS
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSignalType(SignalType.FOREX);
+                      setActiveSignal(null);
+                      setPendingSignal(null);
+                    }}
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
+                      signalType === SignalType.FOREX
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 border-transparent text-white shadow-lg'
+                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    FOREX
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Ativos</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => {
@@ -202,13 +233,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       setActiveSignal(null);
                       setPendingSignal(null);
                     }}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border flex items-center justify-center gap-2 ${
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
                       assetCategory === 'MOEDAS'
-                        ? 'logo-gradient-bg border-transparent text-slate-900 shadow-lg'
+                        ? 'bg-slate-800 border-white/20 text-white shadow-lg'
                         : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
                     }`}
                   >
-                    FOREX / OTC
+                    MOEDAS
                   </button>
                   <button
                     onClick={() => {
@@ -216,19 +247,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       setActiveSignal(null);
                       setPendingSignal(null);
                     }}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border flex items-center justify-center gap-2 ${
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
                       assetCategory === 'CRYPTO'
-                        ? 'bg-gradient-to-r from-orange-500 to-yellow-500 border-transparent text-white shadow-lg shadow-orange-500/20'
+                        ? 'bg-orange-500/20 border-orange-500/40 text-orange-400 shadow-lg'
                         : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
                     }`}
                   >
-                    CRIPTOMOEDAS
+                    CRYPTO
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Timeframe</label>
+                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Tempo Gráfico</label>
                 <div className="grid grid-cols-3 gap-2">
                   {TIMEFRAMES.map(tf => (
                     <button
@@ -240,7 +271,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       }}
                       className={`py-3 rounded-xl text-xs font-black transition-all border ${
                         selectedTimeframe === tf.value
-                          ? 'logo-gradient-bg border-transparent text-slate-900 shadow-md'
+                          ? 'border-white/40 text-white bg-white/10 shadow-md'
                           : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
                       }`}
                     >
@@ -256,16 +287,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <div className="lg:col-span-3">
           {!activeSignal ? (
             <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
-              {(isScanning || (pendingSignal && secondsToNextCandle > 15)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-emerald-500/10'}`}></div>}
+              {(isScanning || (pendingSignal && secondsToNextCandle > 15)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-blue-500/10'}`}></div>}
               <div className="relative z-10 flex flex-col items-center w-full">
                 <div className={`mb-10 transition-all ${(isScanning || pendingSignal) ? 'scale-110' : 'opacity-20'}`}>
                   {isScanning || (pendingSignal && secondsToNextCandle > 15) ? (
                     <div className="relative h-32 w-32 flex items-center justify-center mx-auto">
-                      <div className={`absolute inset-0 border-4 rounded-full ${assetCategory === 'CRYPTO' ? 'border-orange-500/10' : 'border-emerald-500/10'}`}></div>
-                      <div className={`absolute inset-0 border-4 rounded-full animate-spin ${assetCategory === 'CRYPTO' ? 'border-t-orange-500' : 'border-t-emerald-500'}`}></div>
+                      <div className="absolute inset-0 border-4 rounded-full border-white/5"></div>
+                      <div className={`absolute inset-0 border-4 rounded-full animate-spin ${signalType === SignalType.BINARY ? 'border-t-emerald-500' : 'border-t-blue-500'}`}></div>
                       <div className="flex flex-col items-center text-center px-4">
-                        <span className={`text-[10px] font-black leading-none mb-1 ${assetCategory === 'CRYPTO' ? 'text-orange-400' : 'text-emerald-400'}`}>{currentScanningPair?.symbol || 'IA FLOW'}</span>
-                        <span className="text-[8px] text-slate-500 font-bold uppercase">ANALISANDO ESTRUTURA...</span>
+                        <span className={`text-[10px] font-black mb-1 ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`}>{currentScanningPair?.symbol || 'IA FLOW'}</span>
+                        <span className="text-[8px] text-slate-500 font-bold uppercase">ANALISANDO...</span>
                       </div>
                     </div>
                   ) : (
@@ -279,27 +310,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 
                 <div className="max-w-md w-full">
                   <h3 className="text-3xl font-black text-white mb-6 tracking-tighter uppercase">
-                    {(isScanning || (pendingSignal && secondsToNextCandle > 15)) ? 'IA BUSCANDO ENTRADA VIP' : `AGUARDANDO GATILHO`}
+                    {(isScanning || (pendingSignal && secondsToNextCandle > 15)) ? `GERANDO SINAL ${signalType}` : `AGUARDANDO GATILHO`}
                   </h3>
                   
-                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${secondsToNextCandle <= 25 ? (assetCategory === 'CRYPTO' ? 'bg-orange-500/10 border-orange-500/30' : 'bg-emerald-500/10 border-emerald-500/30') : 'bg-slate-900/40 border-white/5'}`}>
+                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 bg-slate-900/40 border-white/5`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
                       {secondsToNextCandle > 25 
-                        ? `Aguardando o momento ideal da vela de 1 min. O escaneamento sniper inicia aos 25s.`
+                        ? `A IA monitora padrões estruturais em tempo real. Escaneamento sniper inicia aos 25s de cada ciclo.`
                         : pendingSignal 
-                          ? `ESTRUTURA CONFIRMADA! Liberando sinal em ${secondsToNextCandle - 15}s...`
-                          : `IA BUSCANDO ENTRADA VIP: Analisando rompimentos no ${currentMarketLabel}.`}
+                          ? `OPORTUNIDADE DETECTADA! Liberando dados em ${secondsToNextCandle - 15}s...`
+                          : `IA ANALISANDO: Buscando rompimentos e zonas de liquidez para ${signalType}.`}
                     </p>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-4">
-                      <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em] mb-2">Monitoramento Ativo</span>
-                      <div className="w-48 h-1 bg-slate-900 rounded-full overflow-hidden">
-                        <div 
-                        className={`h-full transition-all duration-1000 ease-linear shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-orange-500 shadow-orange-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`}
-                        style={{ width: `${(60 - secondsToNextCandle) * 1.66}%` }}
-                        ></div>
-                      </div>
                   </div>
                 </div>
               </div>
@@ -307,13 +328,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           ) : (
             <div className={`max-w-2xl mx-auto w-full transition-all duration-500 ${flashActive ? (activeSignal.direction === SignalDirection.CALL ? 'animate-flash-call' : 'animate-flash-put') : 'animate-in fade-in slide-in-from-bottom-6'}`}>
               <div className="mb-8 flex flex-col items-center gap-4 text-center">
-                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10 border-orange-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
-                  <span className={`animate-ping h-2.5 w-2.5 rounded-full ${assetCategory === 'CRYPTO' ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
-                  <span className={`text-sm font-black uppercase tracking-widest ${assetCategory === 'CRYPTO' ? 'text-orange-400' : 'text-emerald-400'}`}>
-                    {activeSignal.strategy}
+                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${signalType === SignalType.BINARY ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
+                  <span className={`animate-ping h-2.5 w-2.5 rounded-full ${signalType === SignalType.BINARY ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                  <span className={`text-sm font-black uppercase tracking-widest ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    Sinal {activeSignal.type} Confirmado
                   </span>
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Preparar Ordem M1</h2>
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Oportunidade Sniper</h2>
               </div>
 
               <SignalCard signal={activeSignal} />
@@ -324,25 +345,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
                 
                 <div className="flex items-center gap-5 mb-8">
-                  <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${assetCategory === 'CRYPTO' ? 'bg-orange-500/20 border-orange-500/30' : 'bg-emerald-500/20 border-emerald-500/30'}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 ${assetCategory === 'CRYPTO' ? 'text-orange-400' : 'text-emerald-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${signalType === SignalType.BINARY ? 'border-emerald-500/30 bg-emerald-500/20' : 'border-blue-500/30 bg-blue-500/20'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Gatilho v11.0</h4>
-                    <p className={`text-xs font-bold uppercase tracking-wider ${assetCategory === 'CRYPTO' ? 'text-orange-400/80' : 'text-emerald-400/80'}`}>Execute na virada exata para o próximo minuto</p>
+                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Protocolo v12.1</h4>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${signalType === SignalType.BINARY ? 'text-emerald-400/80' : 'text-blue-400/80'}`}>Atenção ao gerenciamento de risco (Stop/Meta)</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${assetCategory === 'CRYPTO' ? 'bg-orange-500' : 'bg-emerald-500'}`}>1</span>
-                    <p>Prepare o ativo <span className="text-white font-bold">{activeSignal.pair}</span> imediatamente.</p>
+                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${signalType === SignalType.BINARY ? 'bg-emerald-500' : 'bg-blue-500'}`}>1</span>
+                    <p>Ative o par <span className="text-white font-bold">{activeSignal.pair}</span> agora.</p>
                   </div>
-                  <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${assetCategory === 'CRYPTO' ? 'bg-orange-500/20 border-orange-500/40' : 'bg-emerald-500/20 border-emerald-500/40'}`}>
+                  <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${signalType === SignalType.BINARY ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-blue-500/20 border-blue-500/40'}`}>
                     <span className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">2</span>
-                    <p className="font-bold uppercase">Clique em <span className="text-white font-black">{activeSignal.direction === 'CALL' ? 'COMPRAR' : 'VENDER'}</span> quando o tempo zerar.</p>
+                    <p className="font-bold uppercase">
+                      {activeSignal.type === SignalType.FOREX 
+                        ? `Abra ordem de ${activeSignal.direction === 'CALL' ? 'BUY (COMPRA)' : 'SELL (VENDA)'} com os parâmetros acima.` 
+                        : `Clique em ${activeSignal.direction === 'CALL' ? 'COMPRAR' : 'VENDER'} exatamente no 00:00.`}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -353,7 +378,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       <footer className="glass border-t border-white/5 py-6 px-6 text-center">
         <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">
-          ULTRA TRADE VIP © 2026 | ESTRATÉGIA REAL-PRECISION v11.0
+          ULTRA TRADE VIP © 2026 | MULTI-STRATEGY ENGINE v12.1
         </p>
       </footer>
     </div>

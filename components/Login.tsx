@@ -4,9 +4,10 @@ import Logo from './Logo';
 
 interface LoginProps {
   onLogin: (password: string) => Promise<void>;
+  onGoToRegister: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="inline-block bg-blue-500/10 text-blue-400 text-[10px] font-black px-4 py-1 rounded-full border border-blue-500/20 mb-4 uppercase tracking-[0.3em]">
             Validação de Licença VIP
           </div>
-          <p className="text-slate-400 mt-2 font-medium tracking-wide">Terminal Sincronizado v4.1</p>
+          <p className="text-slate-400 mt-2 font-medium tracking-wide">Terminal Sincronizado v12.1</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
@@ -71,6 +72,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             )}
           </button>
         </form>
+
+        <div className="mt-6 text-center relative z-10">
+          <button 
+            onClick={onGoToRegister}
+            className="text-[10px] text-slate-500 uppercase font-black hover:text-blue-400 transition-colors tracking-widest"
+          >
+            Não tem uma licença? Criar Cadastro Gratuito
+          </button>
+        </div>
 
         <div className="mt-10 pt-6 border-t border-white/5 text-center relative z-10">
           <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-black">

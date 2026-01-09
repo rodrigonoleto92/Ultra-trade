@@ -5,6 +5,11 @@ export enum MarketType {
   CRYPTO = 'Crypto'
 }
 
+export enum SignalType {
+  BINARY = 'OB',
+  FOREX = 'FOREX'
+}
+
 export enum SignalDirection {
   CALL = 'CALL',
   PUT = 'PUT'
@@ -21,8 +26,15 @@ export interface Signal {
   pair: string;
   direction: SignalDirection;
   timeframe: Timeframe;
-  entryTime: string;
-  expirationTime: string;
+  type: SignalType;
+  // Campos para OB
+  entryTime?: string;
+  expirationTime?: string;
+  // Campos para Forex
+  entryPrice?: string;
+  stopLoss?: string;
+  takeProfit?: string;
+  
   confidence: number;
   strategy: string;
   timestamp: number;
