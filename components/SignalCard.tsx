@@ -11,82 +11,84 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isForex = signal.type === SignalType.FOREX;
 
   return (
-    <div className={`glass rounded-2xl overflow-hidden border-l-4 ${isCall ? 'border-l-emerald-500' : 'border-l-rose-500'} transition-all hover:scale-[1.02] duration-300`}>
-      <div className="p-5">
-        <div className="flex justify-between items-start mb-4">
+    <div className={`glass rounded-[32px] overflow-hidden border-l-8 ${isCall ? 'border-l-emerald-500' : 'border-l-rose-500'} transition-all hover:scale-[1.01] duration-500 shadow-2xl`}>
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <h3 className="text-2xl font-black text-white flex items-center gap-3">
               {signal.pair}
-              <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400 font-black whitespace-nowrap">{signal.type}</span>
+              <span className="text-[10px] bg-white/10 px-2 py-1 rounded-md text-slate-300 font-black tracking-widest">{signal.type}</span>
             </h3>
-            <span className="text-xs font-medium text-slate-400 uppercase bg-slate-800 px-2 py-1 rounded mt-1 inline-block">
+            <span className="text-xs font-black text-slate-400 uppercase bg-slate-800/80 border border-white/5 px-3 py-1.5 rounded-full mt-2 inline-block tracking-tighter">
               {signal.timeframe}
             </span>
           </div>
           <div className="text-right">
-            <span className={`text-xs font-bold px-2 py-1 rounded-full ${signal.confidence > 85 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
-              {signal.confidence}% Confiança
+            <div className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${signal.confidence > 85 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+              {signal.confidence}% CONFIANÇA
+            </div>
+          </div>
+        </div>
+
+        <div className={`flex items-center justify-center py-6 rounded-2xl mb-6 shadow-lg ${isCall ? 'signal-call' : 'signal-put'}`}>
+          <div className="flex flex-col items-center">
+            {isCall ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            )}
+            <span className="text-3xl font-black text-white tracking-tighter">
+              {isCall ? (isForex ? 'BUY (COMPRA)' : 'CALL (COMPRA)') : (isForex ? 'SELL (VENDA)' : 'PUT (VENDA)')}
             </span>
           </div>
         </div>
 
-        <div className={`flex items-center justify-center py-4 rounded-xl mb-4 ${isCall ? 'signal-call' : 'signal-put'}`}>
-          <div className="flex flex-col items-center">
-            {isCall ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            )}
-            <span className="text-2xl font-black text-white">{isCall ? (isForex ? 'COMPRA (BUY)' : 'COMPRA (CALL)') : (isForex ? 'VENDA (SELL)' : 'VENDA (PUT)')}</span>
-          </div>
-        </div>
-
         {isForex ? (
-          <div className="space-y-3 mb-4">
-            <div className="bg-slate-800/50 p-3 rounded-lg flex justify-between items-center border border-white/5">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Preço de Entrada</span>
-              <span className="text-base font-mono font-bold text-emerald-400">{signal.entryPrice}</span>
+          <div className="space-y-4 mb-6">
+            <div className="bg-slate-900/80 p-4 rounded-2xl flex justify-between items-center border border-white/5 shadow-inner">
+              <span className="text-[11px] text-slate-500 uppercase font-black tracking-[0.2em]">Entrada</span>
+              <span className="text-lg font-mono font-black text-blue-400">{signal.entryPrice}</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center flex flex-col items-center justify-center min-h-[70px]">
-                <p className="text-[9px] text-rose-500 uppercase font-black mb-1">Stop Loss</p>
-                <p className="text-sm font-mono font-black text-white">{signal.stopLoss}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/30 text-center flex flex-col items-center justify-center min-h-[90px] shadow-sm">
+                <p className="text-[10px] text-rose-500 uppercase font-black mb-1 tracking-widest">STOP LOSS</p>
+                <p className="text-base font-mono font-black text-white tracking-wider">{signal.stopLoss || '1.0% (Fixo)'}</p>
               </div>
-              <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 text-center flex flex-col items-center justify-center min-h-[70px]">
-                <p className="text-[9px] text-emerald-500 uppercase font-black mb-1">Take Profit</p>
-                <p className="text-sm font-mono font-black text-white">{signal.takeProfit}</p>
+              <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/30 text-center flex flex-col items-center justify-center min-h-[90px] shadow-sm">
+                <p className="text-[10px] text-emerald-500 uppercase font-black mb-1 tracking-widest">TAKE PROFIT</p>
+                <p className="text-base font-mono font-black text-white tracking-wider">{signal.takeProfit || '2.0% (Fixo)'}</p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 text-center mb-4">
-            <div className="bg-slate-800/50 p-2 rounded-lg border border-white/5">
-              <p className="text-[10px] text-slate-500 uppercase font-bold">Entrada</p>
-              <p className="text-lg font-mono font-bold text-white">{signal.entryTime}</p>
+          <div className="grid grid-cols-2 gap-4 text-center mb-6">
+            <div className="bg-slate-900/80 p-4 rounded-2xl border border-white/5 shadow-inner">
+              <p className="text-[10px] text-slate-500 uppercase font-black mb-1 tracking-widest">Entrada</p>
+              <p className="text-xl font-mono font-black text-white">{signal.entryTime}</p>
             </div>
-            <div className="bg-slate-800/50 p-2 rounded-lg border border-white/5">
-              <p className="text-[10px] text-slate-500 uppercase font-bold">Expiração</p>
-              <p className="text-lg font-mono font-bold text-white">{signal.expirationTime}</p>
+            <div className="bg-slate-900/80 p-4 rounded-2xl border border-white/5 shadow-inner">
+              <p className="text-[10px] text-slate-500 uppercase font-black mb-1 tracking-widest">Expiração</p>
+              <p className="text-xl font-mono font-black text-white">{signal.expirationTime}</p>
             </div>
           </div>
         )}
 
-        <div className="mt-2 text-xs text-slate-400">
-          <strong className="text-slate-300 font-black uppercase text-[10px]">Análise da IA:</strong> 
-          <p className="mt-1 leading-relaxed opacity-80 italic">"{signal.strategy}"</p>
+        <div className="mt-2 bg-slate-900/40 p-4 rounded-xl border border-white/5">
+          <strong className="text-slate-500 font-black uppercase text-[10px] tracking-widest block mb-2">Protocolo de Análise:</strong> 
+          <p className="text-xs text-slate-300 leading-relaxed font-medium italic">"{signal.strategy}"</p>
         </div>
       </div>
       
-      <div className="bg-slate-800/30 px-5 py-2 flex justify-between items-center border-t border-slate-700/50">
-        <span className="text-[10px] text-slate-500 flex items-center gap-1 uppercase font-black">
+      <div className="bg-slate-900/60 px-6 py-3 flex justify-between items-center border-t border-white/5">
+        <span className="text-[10px] text-slate-500 flex items-center gap-2 uppercase font-black tracking-widest">
           <span className={`h-2 w-2 rounded-full ${isForex ? 'bg-blue-500' : 'bg-emerald-500'} animate-pulse`}></span>
-          Sinal {signal.type} Ativo
+          Sinal Ativo
         </span>
-        <span className="text-[10px] text-slate-500 font-mono">ID: {signal.id}</span>
+        <span className="text-[10px] text-slate-600 font-mono font-bold tracking-tighter uppercase">Ref ID: {signal.id}</span>
       </div>
     </div>
   );

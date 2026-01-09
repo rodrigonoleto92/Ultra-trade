@@ -1,15 +1,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Login from './components/Login';
-import Register from './components/Register';
-import Success from './components/Success';
 import Dashboard from './components/Dashboard';
 import { APP_PASSWORDS, REMOTE_PASSWORDS_URL } from './constants';
 
-type AuthView = 'login' | 'register' | 'success';
-
 const App: React.FC = () => {
-  const [view, setView] = useState<AuthView>('login');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return !!localStorage.getItem('ultra_trade_session');
   });
@@ -32,14 +27,18 @@ const App: React.FC = () => {
   }, []);
 
   const validatePassword = useCallback(async (pass: string) => {
+    // 1. Verifica senhas fixas no código
     if (APP_PASSWORDS.includes(pass)) return true;
     
-    // Verifica usuários registrados localmente no navegador
+    // 2. Verifica senhas remotas (GitHub ou URL externa)
+    const remoteList = await fetchRemotePasswords();
+    if (remoteList.includes(pass)) return true;
+
+    // 3. Verifica se existe no localStorage (se ainda for usado para persistência local)
     const localUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
     if (localUsers.includes(pass)) return true;
 
-    const remoteList = await fetchRemotePasswords();
-    return remoteList.includes(pass);
+    return false;
   }, [fetchRemotePasswords]);
 
   useEffect(() => {
@@ -55,6 +54,7 @@ const App: React.FC = () => {
       setIsVerifying(false);
     };
 
+    // Verifica a licença a cada 5 minutos
     const timer = setInterval(checkAccess, 5 * 60 * 1000);
     return () => clearInterval(timer);
   }, [authPassword, validatePassword]);
@@ -77,11 +77,6 @@ const App: React.FC = () => {
     setAuthPassword(null);
     setIsLoggedIn(false);
     localStorage.removeItem('ultra_trade_session');
-    setView('login');
-  };
-
-  const handleRegisterSuccess = (pass: string) => {
-    setView('success');
   };
 
   if (isLoggedIn) {
@@ -91,7 +86,7 @@ const App: React.FC = () => {
           <div className="fixed top-24 right-4 z-50">
             <div className="bg-blue-500/10 backdrop-blur-md border border-blue-500/20 px-3 py-1 rounded-full flex items-center gap-2">
               <div className="h-1.5 w-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-              <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Sincronizando...</span>
+              <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Sincronizando Licença...</span>
             </div>
           </div>
         )}
@@ -102,21 +97,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0c]">
-      {view === 'login' && (
-        <Login 
-          onLogin={handleLogin} 
-          onGoToRegister={() => setView('register')} 
-        />
-      )}
-      {view === 'register' && (
-        <Register 
-          onSuccess={handleRegisterSuccess} 
-          onBackToLogin={() => setView('login')} 
-        />
-      )}
-      {view === 'success' && (
-        <Success onGoToLogin={() => setView('login')} />
-      )}
+      <Login onLogin={handleLogin} />
     </div>
   );
 };

@@ -4,10 +4,9 @@ import Logo from './Logo';
 
 interface LoginProps {
   onLogin: (password: string) => Promise<void>;
-  onGoToRegister: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,14 +42,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
           <div>
-            <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-tighter">Sua Chave de Acesso</label>
+            <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-tighter text-center">Insira sua Chave de Acesso</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
               disabled={isLoading}
-              className="w-full bg-slate-900/80 border border-slate-700/50 text-white px-5 py-4 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-slate-700 font-mono disabled:opacity-50"
+              className="w-full bg-slate-900/80 border border-slate-700/50 text-white px-5 py-4 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-center placeholder:text-slate-700 font-mono disabled:opacity-50"
               required
             />
           </div>
@@ -72,15 +71,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center relative z-10">
-          <button 
-            onClick={onGoToRegister}
-            className="text-[10px] text-slate-500 uppercase font-black hover:text-blue-400 transition-colors tracking-widest"
-          >
-            Não tem uma licença? Criar Cadastro Gratuito
-          </button>
-        </div>
 
         <div className="mt-10 pt-6 border-t border-white/5 text-center relative z-10">
           <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-black">
