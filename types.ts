@@ -7,7 +7,7 @@ export enum MarketType {
 
 export enum SignalType {
   BINARY = 'OB',
-  FOREX = 'FOREX'
+  FOREX = 'FOREX / CRIPTO'
 }
 
 export enum SignalDirection {

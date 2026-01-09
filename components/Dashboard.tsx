@@ -219,7 +219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                         : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
                     }`}
                   >
-                    FOREX
+                    FOREX / CRIPTO
                   </button>
                 </div>
               </div>
