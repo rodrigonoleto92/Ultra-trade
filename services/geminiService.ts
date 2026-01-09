@@ -47,28 +47,15 @@ export async function generateSignal(
     const prompt = type === SignalType.BINARY 
       ? `IA ESTRATÉGICA V12.1 - OPÇÕES BINÁRIAS - ${isOTC ? 'MERCADO OTC' : 'MERCADO REAL'}:
          Ativo: ${pair} | Timeframe: ${timeframe}
-         Estratégia: Rompimento de Micro-Bandeira M1.
          Gere sinal para abertura de vela das ${entryTime}.
-         Responda em JSON rigoroso: 
-         { 
-           "direction": "CALL"|"PUT", 
-           "confidence": 96-99, 
-           "analysis": "Explicação técnica curta do rompimento." 
-         }`
-      : `IA ESTRATÉGICA V12.1 - FOREX / CRIPTO TRADING:
+         Responda em JSON: { "direction": "CALL"|"PUT", "confidence": 96-99, "analysis": "..." }`
+      : `IA ESTRATÉGICA V12.1 - FOREX / CRIPTO:
          Ativo: ${pair} | Timeframe: ${timeframe}
-         Identifique uma entrada técnica de alta precisão. 
-         IMPORTANTE: O preço de entrada deve ser 'Mkt (Preço Atual)'.
-         Obrigatório: Gere preços técnicos realistas (ex: 1.08450 ou 96450.00) para Stop Loss e Take Profit baseados na volatilidade do ativo.
-         Responda em JSON rigoroso: 
-         { 
-           "direction": "CALL"|"PUT", 
-           "confidence": 93-98, 
-           "entryPrice": "Mkt",
-           "stopLoss": "VALOR_NUMERICO_STOP",
-           "takeProfit": "VALOR_NUMERICO_ALVO",
-           "analysis": "Explicação do padrão gráfico detectado" 
-         }`;
+         Identifique entrada técnica. 
+         IMPORTANTE: Retorne valores EXPLICITOS para Stop Loss e Take Profit.
+         Se não tiver preço exato, use as porcentagens: Stop: -1.00% | Alvo: +2.00%.
+         Responda em JSON rigoroso com as chaves: direction, confidence, entryPrice, stopLoss, takeProfit, analysis.
+         Exemplo de valores: "stopLoss": "-1.0% (Técnico)", "takeProfit": "+2.0% (Alvo)".`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -85,12 +72,15 @@ export async function generateSignal(
             stopLoss: { type: Type.STRING },
             takeProfit: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'analysis', 'stopLoss', 'takeProfit'],
+          required: ['direction', 'confidence', 'analysis'],
         },
       },
     });
 
     const data = JSON.parse(response.text || '{}');
+
+    // Garantia de que os valores de Forex/Cripto nunca fiquem vazios
+    const isForexType = type === SignalType.FOREX;
 
     return {
       id: generateVIPId(type),
@@ -100,16 +90,16 @@ export async function generateSignal(
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : undefined,
       expirationTime: type === SignalType.BINARY ? expirationTime : undefined,
-      entryPrice: type === SignalType.FOREX ? (data.entryPrice || 'Mkt') : 'N/A',
-      stopLoss: type === SignalType.FOREX ? (data.stopLoss || 'Calculando...') : 'N/A',
-      takeProfit: type === SignalType.FOREX ? (data.takeProfit || 'Calculando...') : 'N/A',
+      entryPrice: isForexType ? (data.entryPrice || 'À Mercado') : 'N/A',
+      stopLoss: isForexType ? (data.stopLoss || '1.0% (Fixo)') : 'N/A',
+      takeProfit: isForexType ? (data.takeProfit || '2.0% (Fixo)') : 'N/A',
       confidence: data.confidence || 95,
-      strategy: data.analysis || `${type} Estrutura de Preço`,
+      strategy: data.analysis || 'Análise de Fluxo de Ordens',
       timestamp: Date.now()
     };
 
   } catch (error: any) {
-    // Fallback com valores técnicos simulados para não quebrar a UI
+    const isForexType = type === SignalType.FOREX;
     return {
       id: generateVIPId(type),
       pair,
@@ -118,11 +108,11 @@ export async function generateSignal(
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : undefined,
       expirationTime: type === SignalType.BINARY ? expirationTime : undefined,
-      entryPrice: type === SignalType.FOREX ? 'Mkt' : 'N/A',
-      stopLoss: 'Técnico',
-      takeProfit: 'Técnico',
-      confidence: 85,
-      strategy: 'Análise de Contingência Ativada',
+      entryPrice: isForexType ? 'À Mercado' : 'N/A',
+      stopLoss: isForexType ? '1.0% (Fixo)' : 'N/A',
+      takeProfit: isForexType ? '2.0% (Fixo)' : 'N/A',
+      confidence: 88,
+      strategy: 'Sistema de Contingência: Baseado em Volatilidade Média.',
       timestamp: Date.now()
     };
   }

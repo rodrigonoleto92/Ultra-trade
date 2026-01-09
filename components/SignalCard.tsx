@@ -48,17 +48,17 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
         {isForex ? (
           <div className="space-y-3 mb-4">
             <div className="bg-slate-800/50 p-3 rounded-lg flex justify-between items-center border border-white/5">
-              <span className="text-[10px] text-slate-500 uppercase font-black">Preço de Entrada</span>
+              <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Preço de Entrada</span>
               <span className="text-base font-mono font-bold text-emerald-400">{signal.entryPrice}</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center">
-                <p className="text-[9px] text-rose-500 uppercase font-black mb-1">Preço de Stop</p>
-                <p className="text-sm font-mono font-bold text-white tracking-wider">{signal.stopLoss}</p>
+              <div className="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center flex flex-col items-center justify-center min-h-[70px]">
+                <p className="text-[9px] text-rose-500 uppercase font-black mb-1">Stop Loss</p>
+                <p className="text-sm font-mono font-black text-white">{signal.stopLoss}</p>
               </div>
-              <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 text-center">
-                <p className="text-[9px] text-emerald-500 uppercase font-black mb-1">Preço Alvo</p>
-                <p className="text-sm font-mono font-bold text-white tracking-wider">{signal.takeProfit}</p>
+              <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 text-center flex flex-col items-center justify-center min-h-[70px]">
+                <p className="text-[9px] text-emerald-500 uppercase font-black mb-1">Take Profit</p>
+                <p className="text-sm font-mono font-black text-white">{signal.takeProfit}</p>
               </div>
             </div>
           </div>
