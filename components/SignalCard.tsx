@@ -17,7 +17,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           <div>
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
               {signal.pair}
-              <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400 font-black">{signal.type}</span>
+              <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400 font-black whitespace-nowrap">{signal.type}</span>
             </h3>
             <span className="text-xs font-medium text-slate-400 uppercase bg-slate-800 px-2 py-1 rounded mt-1 inline-block">
               {signal.timeframe}
@@ -49,15 +49,15 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           <div className="space-y-3 mb-4">
             <div className="bg-slate-800/50 p-3 rounded-lg flex justify-between items-center border border-white/5">
               <span className="text-[10px] text-slate-500 uppercase font-black">Preço de Entrada</span>
-              <span className="text-base font-mono font-bold text-white">{signal.entryPrice || 'Mkt'}</span>
+              <span className="text-base font-mono font-bold text-emerald-400">{signal.entryPrice}</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center">
-                <p className="text-[9px] text-rose-500 uppercase font-black mb-1">Stop Loss</p>
+                <p className="text-[9px] text-rose-500 uppercase font-black mb-1">Preço de Stop</p>
                 <p className="text-sm font-mono font-bold text-white">{signal.stopLoss}</p>
               </div>
               <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 text-center">
-                <p className="text-[9px] text-emerald-500 uppercase font-black mb-1">Take Profit</p>
+                <p className="text-[9px] text-emerald-500 uppercase font-black mb-1">Preço Alvo</p>
                 <p className="text-sm font-mono font-bold text-white">{signal.takeProfit}</p>
               </div>
             </div>
@@ -76,7 +76,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
         )}
 
         <div className="mt-2 text-xs text-slate-400">
-          <strong className="text-slate-300 font-black uppercase text-[10px]">Análise IA:</strong> 
+          <strong className="text-slate-300 font-black uppercase text-[10px]">Análise da IA:</strong> 
           <p className="mt-1 leading-relaxed opacity-80">{signal.strategy}</p>
         </div>
       </div>

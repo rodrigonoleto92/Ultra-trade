@@ -55,17 +55,19 @@ export async function generateSignal(
            "confidence": 96-99, 
            "analysis": "Explicação técnica curta do rompimento." 
          }`
-      : `IA ESTRATÉGICA V12.1 - FOREX TRADING ESTRUTURAL:
+      : `IA ESTRATÉGICA V12.1 - FOREX / CRIPTO TRADING:
          Ativo: ${pair} | Timeframe: ${timeframe}
-         Identifique uma entrada baseada em SMC (Smart Money Concepts) ou Price Action.
+         Identifique uma entrada técnica. 
+         IMPORTANTE: O preço de entrada deve ser 'À Mercado'.
+         Gere valores realistas de Stop Loss e Take Profit baseados na estrutura de preço.
          Responda em JSON rigoroso: 
          { 
            "direction": "CALL"|"PUT", 
            "confidence": 93-98, 
-           "entryPrice": "Preço exato ou Mkt",
-           "stopLoss": "Preço de proteção técnico",
-           "takeProfit": "Preço de alvo 1:3",
-           "analysis": "Padrão de reversão/continuidade identificado" 
+           "entryPrice": "À Mercado",
+           "stopLoss": "Preço sugerido para Stop Loss",
+           "takeProfit": "Preço sugerido para Alvo (Take Profit)",
+           "analysis": "Análise técnica rápida" 
          }`;
 
     const response = await ai.models.generateContent({
@@ -98,11 +100,11 @@ export async function generateSignal(
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : undefined,
       expirationTime: type === SignalType.BINARY ? expirationTime : undefined,
-      entryPrice: type === SignalType.FOREX ? data.entryPrice : 'Mkt Price',
-      stopLoss: type === SignalType.FOREX ? data.stopLoss : 'N/A',
-      takeProfit: type === SignalType.FOREX ? data.takeProfit : 'N/A',
+      entryPrice: type === SignalType.FOREX ? (data.entryPrice || 'À Mercado') : 'N/A',
+      stopLoss: type === SignalType.FOREX ? (data.stopLoss || 'Automático') : 'N/A',
+      takeProfit: type === SignalType.FOREX ? (data.takeProfit || 'Automático') : 'N/A',
       confidence: data.confidence || 95,
-      strategy: data.analysis || `${type} Strategy`,
+      strategy: data.analysis || `${type} Strategy Analysis`,
       timestamp: Date.now()
     };
 
@@ -115,11 +117,11 @@ export async function generateSignal(
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : undefined,
       expirationTime: type === SignalType.BINARY ? expirationTime : undefined,
-      entryPrice: 'Mkt',
-      stopLoss: 'Auto',
-      takeProfit: 'Auto',
+      entryPrice: type === SignalType.FOREX ? 'À Mercado' : 'N/A',
+      stopLoss: 'Técnico',
+      takeProfit: 'Técnico',
       confidence: 85,
-      strategy: 'Fallback Analysis System',
+      strategy: 'Análise de Contingência Ativada',
       timestamp: Date.now()
     };
   }
