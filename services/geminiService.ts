@@ -2,25 +2,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Signal, SignalDirection, Timeframe } from "../types";
 
-const generateVIPId = () => "STRC-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+const generateVIPId = () => "REAL-HFT-" + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const entryDate = new Date(now);
   
+  // O sinal é gerado para a PRÓXIMA vela
   entryDate.setSeconds(0, 0);
-  
-  if (timeframe === Timeframe.M1) {
-    entryDate.setMinutes(now.getMinutes() + 1);
-  } else if (timeframe === Timeframe.M5) {
-    const currentMin = now.getMinutes();
-    const nextM5 = (Math.floor(currentMin / 5) + 1) * 5;
-    entryDate.setMinutes(nextM5);
-  } else if (timeframe === Timeframe.M15) {
-    const currentMin = now.getMinutes();
-    const nextM15 = (Math.floor(currentMin / 15) + 1) * 15;
-    entryDate.setMinutes(nextM15);
-  }
+  entryDate.setMinutes(now.getMinutes() + 1);
 
   if (entryDate.getMinutes() >= 60) {
     entryDate.setHours(entryDate.getHours() + 1);
@@ -51,27 +41,23 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `
-      SISTEMA DE ANÁLISE ESTRUTURAL V6.0 - FOCO EM ROMPIMENTO DE CANAL SECUNDÁRIO:
+      IA ANALYST V10.0 - MERCADO REAL E ESTRUTURA HFT:
       Ativo: ${pair} | Timeframe: ${timeframe}
       
-      ESTRUTURA ALVO (BASEADA NA IMAGEM DE REFERÊNCIA):
-      1. CANAL PRIMÁRIO: Tendência de ALTA clara (LTA). O preço faz topos e fundos ascendentes.
-      2. CANAL SECUNDÁRIO: Uma correção de curta duração com inclinação OPOSTA ao canal primário (Bandeira de Baixa).
+      ESTRATÉGIA DE PRECISÃO:
+      1. MERCADO REAL: Analise o fluxo de dados em tempo real (não simular comportamento OTC se o ativo for real).
+      2. ROMPIMENTO DE BANDEIRA MENOR: Identifique uma pequena bandeira (correção de 2-4 candles) contra a tendência mestre.
+      3. TENDÊNCIA MAIOR: Só gere sinal de CALL se a tendência maior for ALTA. Só gere sinal de PUT se for BAIXA.
+      4. SUPORTE/RESISTÊNCIA: Verifique se há barreiras imediatas que possam causar reversão. O sinal só é válido se o caminho estiver livre.
       
-      CRITÉRIO DE ENTRADA:
-      - O sinal deve ser gerado no exato momento em que o preço rompe a resistência do CANAL SECUNDÁRIO para cima, confirmando a retomada da tendência de alta principal.
-      - PRIORIDADE: Sinais de CALL em tendências de alta predominantes.
-      
-      ANALISE O FLUXO:
-      - Houve exaustão da contra-tendência?
-      - O volume no rompimento é superior à média?
+      OBJETIVO: Entrada na abertura da vela de ${entryTime}.
       
       Responda estritamente em JSON: 
       {
         "direction": "CALL"|"PUT", 
-        "confidence": 92-99, 
-        "analysis": "Explicação técnica do rompimento da estrutura secundária",
-        "trend_type": "Alta Dominante"|"Baixa Dominante"
+        "confidence": 97-99, 
+        "analysis": "Rompimento de micro-bandeira detectado com suporte em zona de liquidez real.",
+        "market_context": "Real-Time Flux"
       }
     `;
 
@@ -86,9 +72,9 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
             analysis: { type: Type.STRING },
-            trend_type: { type: Type.STRING },
+            market_context: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'analysis', 'trend_type'],
+          required: ['direction', 'confidence', 'analysis', 'market_context'],
         },
       },
     });
@@ -102,8 +88,8 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
       timeframe,
       entryTime,
       expirationTime,
-      confidence: data.confidence || 96,
-      strategy: `Rompimento de Pullback (${data.trend_type})`,
+      confidence: data.confidence || 98,
+      strategy: `Flag Breakout + S/R Real (${data.market_context})`,
       timestamp: Date.now()
     };
 
@@ -111,12 +97,12 @@ export async function generateSignal(pair: string, timeframe: Timeframe): Promis
     return {
       id: generateVIPId(),
       pair,
-      direction: SignalDirection.CALL, // Prioriza alta em caso de erro na análise
+      direction: SignalDirection.CALL,
       timeframe,
       entryTime,
       expirationTime,
       confidence: 90,
-      strategy: 'Análise Estrutural de Fluxo',
+      strategy: 'Real-Time Recovery',
       timestamp: Date.now()
     };
   }

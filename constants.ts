@@ -22,16 +22,16 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/GBP (OTC)', type: MarketType.OTC },
 ];
 
-export const CRYPTO_OTC_PAIRS: CurrencyPair[] = [
-  { symbol: 'BTC/USD (OTC)', type: MarketType.CRYPTO_OTC },
-  { symbol: 'ETH/USD (OTC)', type: MarketType.CRYPTO_OTC },
-  { symbol: 'LTC/USD (OTC)', type: MarketType.CRYPTO_OTC },
-  { symbol: 'SOL/USD (OTC)', type: MarketType.CRYPTO_OTC },
-  { symbol: 'XRP/USD (OTC)', type: MarketType.CRYPTO_OTC },
-  { symbol: 'ADA/USD (OTC)', type: MarketType.CRYPTO_OTC },
+export const CRYPTO_PAIRS: CurrencyPair[] = [
+  { symbol: 'BTC/USD', type: MarketType.CRYPTO },
+  { symbol: 'ETH/USD', type: MarketType.CRYPTO },
+  { symbol: 'LTC/USD', type: MarketType.CRYPTO },
+  { symbol: 'SOL/USD', type: MarketType.CRYPTO },
+  { symbol: 'XRP/USD', type: MarketType.CRYPTO },
+  { symbol: 'ADA/USD', type: MarketType.CRYPTO },
 ];
 
-export const ALL_PAIRS = [...FOREX_PAIRS, ...OTC_PAIRS, ...CRYPTO_OTC_PAIRS];
+export const ALL_PAIRS = [...FOREX_PAIRS, ...OTC_PAIRS, ...CRYPTO_PAIRS];
 
 export const TIMEFRAMES = [
   { label: 'M1', value: Timeframe.M1 },
