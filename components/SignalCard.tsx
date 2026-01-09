@@ -54,11 +54,11 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center">
                 <p className="text-[9px] text-rose-500 uppercase font-black mb-1">Preço de Stop</p>
-                <p className="text-sm font-mono font-bold text-white">{signal.stopLoss}</p>
+                <p className="text-sm font-mono font-bold text-white tracking-wider">{signal.stopLoss}</p>
               </div>
               <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 text-center">
                 <p className="text-[9px] text-emerald-500 uppercase font-black mb-1">Preço Alvo</p>
-                <p className="text-sm font-mono font-bold text-white">{signal.takeProfit}</p>
+                <p className="text-sm font-mono font-bold text-white tracking-wider">{signal.takeProfit}</p>
               </div>
             </div>
           </div>
@@ -77,7 +77,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
 
         <div className="mt-2 text-xs text-slate-400">
           <strong className="text-slate-300 font-black uppercase text-[10px]">Análise da IA:</strong> 
-          <p className="mt-1 leading-relaxed opacity-80">{signal.strategy}</p>
+          <p className="mt-1 leading-relaxed opacity-80 italic">"{signal.strategy}"</p>
         </div>
       </div>
       
