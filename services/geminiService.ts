@@ -6,28 +6,26 @@ const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNI
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
+  
+  // Determinar a duração em minutos com base no enum Timeframe
+  let timeframeMinutes = 1;
+  if (timeframe === Timeframe.M5) timeframeMinutes = 5;
+  else if (timeframe === Timeframe.M15) timeframeMinutes = 15;
+
   const entryDate = new Date(now);
   
-  entryDate.setSeconds(0, 0);
-  entryDate.setMinutes(now.getMinutes() + 1);
+  // Calcula o início da próxima vela (próximo múltiplo do timeframe)
+  const currentMinutes = now.getMinutes();
+  const nextCandleMinutes = Math.ceil((currentMinutes + 0.1) / timeframeMinutes) * timeframeMinutes;
+  
+  entryDate.setMinutes(nextCandleMinutes, 0, 0);
 
-  if (entryDate.getMinutes() >= 60) {
-    entryDate.setHours(entryDate.getHours() + 1);
-    entryDate.setMinutes(entryDate.getMinutes() % 60);
-  }
-
+  // Se o cálculo de minutos ultrapassar 60, o Date() ajusta a hora automaticamente
   const entryTime = entryDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   
   const expDate = new Date(entryDate);
-  if (timeframe === Timeframe.M1) expDate.setMinutes(entryDate.getMinutes() + 1);
-  else if (timeframe === Timeframe.M5) expDate.setMinutes(entryDate.getMinutes() + 5);
-  else expDate.setMinutes(entryDate.getMinutes() + 15);
+  expDate.setMinutes(entryDate.getMinutes() + timeframeMinutes);
   
-  if (expDate.getMinutes() >= 60) {
-    expDate.setHours(expDate.getHours() + 1);
-    expDate.setMinutes(expDate.getMinutes() % 60);
-  }
-
   const expirationTime = expDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return { entryTime, expirationTime };
@@ -51,12 +49,10 @@ export async function generateSignal(
          Responda em JSON: { "direction": "CALL"|"PUT", "confidence": 96-99, "analysis": "..." }`
       : `IA ESTRATÉGICA V12.1 - FOREX / CRIPTO:
          Ativo: ${pair} | Timeframe: ${timeframe}
-         Identifique entrada técnica de alta precisão.
+         Identifique entrada técnica de alta precisão. 
          IMPORTANTE: O preço de entrada deve ser SEMPRE 'Mkt (À Mercado)'.
-         Você DEVE retornar valores para Stop Loss e Take Profit. 
-         Se não puder calcular o preço exato, use as seguintes porcentagens FIXAS:
-         - Stop Loss: -1.00% do preço atual
-         - Take Profit: +2.00% do preço atual
+         Obrigatório retornar valores EXPLICITOS para Stop Loss e Take Profit.
+         Se não tiver preço exato, use porcentagens: Stop: 1.0% | Alvo: 2.0%.
          Responda em JSON rigoroso com as chaves: direction, confidence, entryPrice, stopLoss, takeProfit, analysis.`;
 
     const response = await ai.models.generateContent({

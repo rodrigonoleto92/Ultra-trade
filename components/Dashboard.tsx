@@ -49,25 +49,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // --- LOGICA SNIPER ---
+      // --- LOGICA SNIPER ATUALIZADA (30s ANTES DO FECHAMENTO) ---
       
-      // 1. Limpa sinal de OB na virada exata
+      // 1. Limpa sinal de OB na virada exata da vela
       if (tfSeconds >= 59 && signalType === SignalType.BINARY) {
         setActiveSignal(null);
         setPendingSignal(null);
       }
 
-      // 2. Inicia Escaneamento aos 25 segundos restantes
+      // 2. Inicia Escaneamento aos 45 segundos restantes para dar tempo à IA
       const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
-      if (!isScanning && tfSeconds === 25) {
+      if (!isScanning && tfSeconds === 45) {
         if (lastTriggeredCandleRef.current !== triggerId) {
           lastTriggeredCandleRef.current = triggerId;
           handleScanAndBuffer();
         }
       }
 
-      // 3. REVELA o sinal EXATAMENTE aos 15 segundos restantes
-      if (pendingSignal && tfSeconds === 15) {
+      // 3. REVELA o sinal EXATAMENTE aos 30 segundos restantes
+      if (pendingSignal && tfSeconds === 30) {
         setActiveSignal(pendingSignal);
         setPendingSignal(null);
         setFlashActive(true);
@@ -157,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Global Time</p>
             </div>
             <div className="text-right border-r border-white/10 pr-4 sm:pr-8">
-              <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 15 ? 'text-blue-500 animate-pulse' : 'logo-gradient-text'}`}>
+              <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 30 ? 'text-blue-500 animate-pulse' : 'logo-gradient-text'}`}>
                 {formatTime(secondsToNextCandle)}
               </p>
               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Vela Atual</p>
@@ -287,10 +287,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <div className="lg:col-span-3">
           {!activeSignal ? (
             <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
-              {(isScanning || (pendingSignal && secondsToNextCandle > 15)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-blue-500/10'}`}></div>}
+              {(isScanning || (pendingSignal && secondsToNextCandle > 30)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-blue-500/10'}`}></div>}
               <div className="relative z-10 flex flex-col items-center w-full">
                 <div className={`mb-10 transition-all ${(isScanning || pendingSignal) ? 'scale-110' : 'opacity-20'}`}>
-                  {isScanning || (pendingSignal && secondsToNextCandle > 15) ? (
+                  {isScanning || (pendingSignal && secondsToNextCandle > 30) ? (
                     <div className="relative h-32 w-32 flex items-center justify-center mx-auto">
                       <div className="absolute inset-0 border-4 rounded-full border-white/5"></div>
                       <div className={`absolute inset-0 border-4 rounded-full animate-spin ${signalType === SignalType.BINARY ? 'border-t-emerald-500' : 'border-t-blue-500'}`}></div>
@@ -310,15 +310,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 
                 <div className="max-w-md w-full">
                   <h3 className="text-3xl font-black text-white mb-6 tracking-tighter uppercase">
-                    {(isScanning || (pendingSignal && secondsToNextCandle > 15)) ? `GERANDO SINAL ${signalType}` : `AGUARDANDO GATILHO`}
+                    {(isScanning || (pendingSignal && secondsToNextCandle > 30)) ? `GERANDO SINAL ${signalType}` : `AGUARDANDO GATILHO`}
                   </h3>
                   
                   <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 bg-slate-900/40 border-white/5`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
-                      {secondsToNextCandle > 25 
-                        ? `A IA monitora padrões estruturais em tempo real. Escaneamento sniper inicia aos 25s de cada ciclo.`
+                      {secondsToNextCandle > 45 
+                        ? `A IA monitora padrões estruturais em tempo real. Escaneamento sniper inicia aos 45s de cada ciclo.`
                         : pendingSignal 
-                          ? `OPORTUNIDADE DETECTADA! Liberando dados em ${secondsToNextCandle - 15}s...`
+                          ? `OPORTUNIDADE DETECTADA! Liberando dados em ${secondsToNextCandle - 30}s...`
                           : `IA ANALISANDO: Buscando rompimentos e zonas de liquidez para ${signalType}.`}
                     </p>
                   </div>
@@ -341,7 +341,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               
               <div className="mt-8 p-10 glass rounded-[40px] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-6 pointer-events-none">
-                   <span className={`text-6xl font-black tabular-nums transition-colors ${secondsToNextCandle <= 5 ? 'text-rose-500' : 'text-blue-500/20'}`}>{secondsToNextCandle}</span>
+                   <span className={`text-6xl font-black tabular-nums transition-colors ${secondsToNextCandle <= 10 ? 'text-rose-500' : 'text-blue-500/20'}`}>{secondsToNextCandle}</span>
                 </div>
                 
                 <div className="flex items-center gap-5 mb-8">
