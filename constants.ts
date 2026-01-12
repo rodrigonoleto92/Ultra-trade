@@ -28,6 +28,9 @@ export const CRYPTO_PAIRS: CurrencyPair[] = [
   { symbol: 'SOL/USD', type: MarketType.CRYPTO },
   { symbol: 'XRP/USD', type: MarketType.CRYPTO },
   { symbol: 'ADA/USD', type: MarketType.CRYPTO },
+  { symbol: 'IDX/USD', type: MarketType.CRYPTO },
+  { symbol: 'MEMX/USD', type: MarketType.CRYPTO },
+  { symbol: 'BNB/USD', type: MarketType.CRYPTO },
 ];
 
 export const ALL_PAIRS = [...FOREX_PAIRS, ...OTC_PAIRS, ...CRYPTO_PAIRS];
@@ -44,5 +47,6 @@ export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuar
 // Senhas administrativas permanentes
 export const APP_PASSWORDS = [
   'ruan_vitalicio', 
+  'suporte_vip',
   'admin_1992'
 ];
