@@ -1,19 +1,71 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import { APP_PASSWORDS, REMOTE_PASSWORDS_URL } from './constants';
 
+const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutos em milisegundos
+
 const App: React.FC = () => {
+  // Alterado de localStorage para sessionStorage para deslogar ao fechar a janela
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return !!localStorage.getItem('ultra_trade_session');
+    return !!sessionStorage.getItem('ultra_trade_session');
   });
   
   const [authPassword, setAuthPassword] = useState<string | null>(() => {
-    return localStorage.getItem('ultra_trade_session');
+    return sessionStorage.getItem('ultra_trade_session');
   });
   
   const [isVerifying, setIsVerifying] = useState(false);
+  const inactivityTimerRef = useRef<number | null>(null);
+
+  const handleLogout = useCallback(() => {
+    setAuthPassword(null);
+    setIsLoggedIn(false);
+    sessionStorage.removeItem('ultra_trade_session');
+    if (inactivityTimerRef.current) {
+      window.clearTimeout(inactivityTimerRef.current);
+    }
+  }, []);
+
+  // Lógica de monitoramento de inatividade
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      window.clearTimeout(inactivityTimerRef.current);
+    }
+    
+    if (isLoggedIn) {
+      inactivityTimerRef.current = window.setTimeout(() => {
+        handleLogout();
+        alert("Sua sessão expirou por inatividade (10 minutos).");
+      }, INACTIVITY_LIMIT);
+    }
+  }, [isLoggedIn, handleLogout]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    // Eventos que resetam o timer de inatividade
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    const handleEvent = () => resetInactivityTimer();
+
+    events.forEach(event => {
+      document.addEventListener(event, handleEvent);
+    });
+
+    // Inicia o timer pela primeira vez
+    resetInactivityTimer();
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleEvent);
+      });
+      if (inactivityTimerRef.current) {
+        window.clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, [isLoggedIn, resetInactivityTimer]);
 
   const fetchRemotePasswords = useCallback(async () => {
     try {
@@ -27,14 +79,12 @@ const App: React.FC = () => {
   }, []);
 
   const validatePassword = useCallback(async (pass: string) => {
-    // 1. Verifica senhas fixas no código
     if (APP_PASSWORDS.includes(pass)) return true;
     
-    // 2. Verifica senhas remotas (GitHub ou URL externa)
     const remoteList = await fetchRemotePasswords();
     if (remoteList.includes(pass)) return true;
 
-    // 3. Verifica se existe no localStorage (se ainda for usado para persistência local)
+    // Verifica backup local caso necessário
     const localUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
     if (localUsers.includes(pass)) return true;
 
@@ -54,10 +104,9 @@ const App: React.FC = () => {
       setIsVerifying(false);
     };
 
-    // Verifica a licença a cada 5 minutos
     const timer = setInterval(checkAccess, 5 * 60 * 1000);
     return () => clearInterval(timer);
-  }, [authPassword, validatePassword]);
+  }, [authPassword, validatePassword, handleLogout]);
 
   const handleLogin = async (pass: string) => {
     setIsVerifying(true);
@@ -66,17 +115,11 @@ const App: React.FC = () => {
     if (isValid) {
       setAuthPassword(pass);
       setIsLoggedIn(true);
-      localStorage.setItem('ultra_trade_session', pass);
+      sessionStorage.setItem('ultra_trade_session', pass);
     } else {
       throw new Error("Acesso negado");
     }
     setIsVerifying(false);
-  };
-
-  const handleLogout = () => {
-    setAuthPassword(null);
-    setIsLoggedIn(false);
-    localStorage.removeItem('ultra_trade_session');
   };
 
   if (isLoggedIn) {
