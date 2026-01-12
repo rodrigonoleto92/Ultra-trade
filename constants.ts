@@ -44,6 +44,5 @@ export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuar
 // Senhas administrativas permanentes
 export const APP_PASSWORDS = [
   'ruan_vitalicio', 
-  'admin_1992',
-  'usuario_teste'
+  'admin_1992'
 ];
