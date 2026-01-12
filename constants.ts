@@ -25,7 +25,6 @@ export const OTC_PAIRS: CurrencyPair[] = [
 export const CRYPTO_PAIRS: CurrencyPair[] = [
   { symbol: 'BTC/USD', type: MarketType.CRYPTO },
   { symbol: 'ETH/USD', type: MarketType.CRYPTO },
-  { symbol: 'LTC/USD', type: MarketType.CRYPTO },
   { symbol: 'SOL/USD', type: MarketType.CRYPTO },
   { symbol: 'XRP/USD', type: MarketType.CRYPTO },
   { symbol: 'ADA/USD', type: MarketType.CRYPTO },
