@@ -46,7 +46,7 @@ export interface CurrencyPair {
   type: MarketType;
 }
 
-// Fixed: Export ChatMessage interface used by GlobalChat.tsx
+// Added ChatMessage interface to fix the import error in components/GlobalChat.tsx
 export interface ChatMessage {
   id: string;
   userId: string;

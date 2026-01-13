@@ -5,16 +5,14 @@ import { Signal, Timeframe, SignalDirection, MarketType, SignalType } from '../t
 import { generateSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
-import GlobalChat from './GlobalChat';
 
 interface DashboardProps {
   onLogout: () => void;
-  userId: string;
 }
 
 type AssetCategory = 'MOEDAS' | 'CRYPTO';
 
-const Dashboard: React.FC<DashboardProps> = ({ onLogout, userId }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
@@ -421,9 +419,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userId }) => {
           )}
         </div>
       </main>
-
-      {/* GlobalChat component */}
-      <GlobalChat currentUserId={userId} />
 
       <footer className="glass border-t border-white/5 py-6 px-6 text-center">
         <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">

@@ -111,8 +111,7 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Fixed: Pass currentUserId from authPassword */}
-        <Dashboard onLogout={handleLogout} userId={authPassword || 'anon_trader'} />
+        <Dashboard onLogout={handleLogout} />
       </div>
     );
   }
