@@ -35,11 +35,24 @@ export const CRYPTO_PAIRS: CurrencyPair[] = [
 
 export const ALL_PAIRS = [...FOREX_PAIRS, ...OTC_PAIRS, ...CRYPTO_PAIRS];
 
-export const TIMEFRAMES = [
+export const BINARY_TIMEFRAMES = [
   { label: 'M1', value: Timeframe.M1 },
   { label: 'M5', value: Timeframe.M5 },
   { label: 'M15', value: Timeframe.M15 },
 ];
+
+export const FOREX_TIMEFRAMES = [
+  { label: 'M1', value: Timeframe.M1 },
+  { label: 'M5', value: Timeframe.M5 },
+  { label: 'M15', value: Timeframe.M15 },
+  { label: 'M30', value: Timeframe.M30 },
+  { label: '1H', value: Timeframe.H1 },
+  { label: '4H', value: Timeframe.H4 },
+  { label: '1D', value: Timeframe.D1 },
+];
+
+// Fallback para compatibilidade
+export const TIMEFRAMES = BINARY_TIMEFRAMES;
 
 // Configuração de verificação de licença externa
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
@@ -47,6 +60,6 @@ export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuar
 // Senhas administrativas permanentes
 export const APP_PASSWORDS = [
   'ruan_vitalicio', 
-  'admin_1992',
-  'teste_30'
+  'teste_30',
+  'admin_1992'
 ];

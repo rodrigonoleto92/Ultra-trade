@@ -1,18 +1,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ALL_PAIRS, TIMEFRAMES } from '../constants';
+import { ALL_PAIRS, BINARY_TIMEFRAMES, FOREX_TIMEFRAMES } from '../constants';
 import { Signal, Timeframe, SignalDirection, MarketType, SignalType } from '../types';
 import { generateSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
+import GlobalChat from './GlobalChat';
 
 interface DashboardProps {
   onLogout: () => void;
+  userId: string;
 }
 
 type AssetCategory = 'MOEDAS' | 'CRYPTO';
 
-const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onLogout, userId }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
@@ -34,6 +36,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     return (hour >= 4 && hour < 16);
   };
 
+  // Garante que o timeframe selecionado é válido para o modo atual
+  useEffect(() => {
+    const currentValidTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
+    const isValid = currentValidTimeframes.some(tf => tf.value === selectedTimeframe);
+    if (!isValid) {
+      setSelectedTimeframe(Timeframe.M1);
+    }
+  }, [signalType, selectedTimeframe]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -49,29 +60,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // --- LOGICA SNIPER ATUALIZADA (30s ANTES DO FECHAMENTO) ---
-      
-      // 1. Limpa sinal de OB na virada exata da vela
+      // Limpa sinais de Binárias ao virar a vela
       if (tfSeconds >= 59 && signalType === SignalType.BINARY) {
         setActiveSignal(null);
         setPendingSignal(null);
       }
 
-      // 2. Inicia Escaneamento aos 45 segundos restantes para dar tempo à IA
-      const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
-      if (!isScanning && tfSeconds === 45) {
-        if (lastTriggeredCandleRef.current !== triggerId) {
-          lastTriggeredCandleRef.current = triggerId;
-          handleScanAndBuffer();
+      // Lógica AUTOMÁTICA apenas para BINÁRIAS
+      if (signalType === SignalType.BINARY) {
+        const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
+        if (!isScanning && tfSeconds === 45) {
+          if (lastTriggeredCandleRef.current !== triggerId) {
+            lastTriggeredCandleRef.current = triggerId;
+            handleScanAndBuffer();
+          }
         }
-      }
 
-      // 3. REVELA o sinal EXATAMENTE aos 30 segundos restantes
-      if (pendingSignal && tfSeconds === 30) {
-        setActiveSignal(pendingSignal);
-        setPendingSignal(null);
-        setFlashActive(true);
-        setTimeout(() => setFlashActive(false), 800);
+        if (pendingSignal && tfSeconds === 30) {
+          setActiveSignal(pendingSignal);
+          setPendingSignal(null);
+          setFlashActive(true);
+          setTimeout(() => setFlashActive(false), 800);
+        }
       }
       
     }, 1000);
@@ -80,7 +90,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const handleScanAndBuffer = async () => {
     setIsScanning(true);
-    
     try {
       const forexIsReal = isForexRealMarket();
       let availablePairs = [];
@@ -112,15 +121,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           signalType
         );
         
-        setPendingSignal(newSignal);
+        if (signalType === SignalType.BINARY) {
+          setPendingSignal(newSignal);
+        } else {
+          setActiveSignal(newSignal);
+        }
       }
-      
     } catch (err) {
       console.error("Erro no processamento:", err);
     } finally {
       setIsScanning(false);
       setCurrentScanningPair(null);
     }
+  };
+
+  const handleManualForexScan = () => {
+    if (isScanning) return;
+    setActiveSignal(null);
+    handleScanAndBuffer();
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -132,9 +150,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const forexIsReal = isForexRealMarket();
   const currentMarketLabel = assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsReal ? 'MERCADO REAL ABERTO' : 'MERCADO EM OTC');
   const marketStatusColor = assetCategory === 'CRYPTO' || forexIsReal ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' : 'text-amber-400 border-amber-500/30 bg-amber-500/5';
+  
+  const currentTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0c] flex flex-col relative">
       <header className="glass sticky top-0 z-50 border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-6">
@@ -181,9 +201,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           <div className={`p-5 rounded-2xl border ${marketStatusColor} transition-all duration-500`}>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-60">Status do Sistema</p>
             <h3 className="text-lg font-black uppercase tracking-tighter">{currentMarketLabel}</h3>
-            {assetCategory === 'MOEDAS' && (
-              <p className="text-[9px] font-bold uppercase mt-2 opacity-50">Forex Real: 04:00 às 16:00 BRT</p>
-            )}
           </div>
 
           <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
@@ -260,8 +277,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Tempo Gráfico</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {TIMEFRAMES.map(tf => (
+                <div className={`grid ${currentTimeframes.length > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
+                  {currentTimeframes.map(tf => (
                     <button
                       key={tf.value}
                       onClick={() => {
@@ -269,7 +286,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                         setActiveSignal(null);
                         setPendingSignal(null);
                       }}
-                      className={`py-3 rounded-xl text-xs font-black transition-all border ${
+                      className={`py-3 rounded-xl text-[9px] font-black transition-all border ${
                         selectedTimeframe === tf.value
                           ? 'border-white/40 text-white bg-white/10 shadow-md'
                           : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
@@ -284,7 +301,31 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           </div>
         </aside>
 
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 flex flex-col">
+          {signalType === SignalType.FOREX && (
+             <div className="mb-4 animate-in fade-in slide-in-from-top-4 flex items-center justify-center">
+                <button
+                  onClick={handleManualForexScan}
+                  disabled={isScanning}
+                  className="w-full sm:w-auto px-10 py-4 rounded-2xl border border-blue-500/30 bg-blue-600 hover:bg-blue-500 transition-all flex items-center justify-center gap-3 group shadow-[0_0_20px_rgba(37,99,235,0.3)] disabled:opacity-50 disabled:grayscale"
+                >
+                  {isScanning ? (
+                    <>
+                      <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm font-black text-white uppercase tracking-widest">IA Escaneando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-sm font-black text-white uppercase tracking-widest">GERAR SINAL FOREX IA</span>
+                    </>
+                  )}
+                </button>
+             </div>
+          )}
+
           {!activeSignal ? (
             <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
               {(isScanning || (pendingSignal && secondsToNextCandle > 30)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-blue-500/10'}`}></div>}
@@ -310,16 +351,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 
                 <div className="max-w-md w-full">
                   <h3 className="text-3xl font-black text-white mb-6 tracking-tighter uppercase">
-                    {(isScanning || (pendingSignal && secondsToNextCandle > 30)) ? `GERANDO SINAL ${signalType}` : `AGUARDANDO GATILHO`}
+                    {(isScanning || (pendingSignal && secondsToNextCandle > 30)) ? `IA PROCESSANDO DADOS` : (signalType === SignalType.FOREX ? 'FOREX: AGUARDANDO COMANDO' : 'BINÁRIAS: AGUARDANDO GATILHO')}
                   </h3>
                   
                   <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 bg-slate-900/40 border-white/5`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
-                      {secondsToNextCandle > 45 
-                        ? `A IA monitora padrões estruturais em tempo real. Escaneamento sniper inicia aos 45s de cada ciclo.`
-                        : pendingSignal 
-                          ? `OPORTUNIDADE DETECTADA! Liberando dados em ${secondsToNextCandle - 30}s...`
-                          : `IA ANALISANDO: Buscando rompimentos e zonas de liquidez para ${signalType}.`}
+                      {signalType === SignalType.FOREX 
+                        ? `A análise em ${selectedTimeframe} está pronta para ser executada. Clique no botão azul acima para iniciar o scanner de topos e fundos.`
+                        : (secondsToNextCandle > 45 
+                          ? 'Monitorando padrões estruturais Sniper. Sinais liberados nos últimos 15s de cada vela.'
+                          : pendingSignal 
+                            ? `OPORTUNIDADE DETECTADA! Confirmando em ${secondsToNextCandle - 30}s...`
+                            : 'Buscando zonas de liquidez para opções binárias.')
+                      }
                     </p>
                   </div>
                 </div>
@@ -331,18 +375,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${signalType === SignalType.BINARY ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
                   <span className={`animate-ping h-2.5 w-2.5 rounded-full ${signalType === SignalType.BINARY ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
                   <span className={`text-sm font-black uppercase tracking-widest ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`}>
-                    Sinal {activeSignal.type} Confirmado
+                    Análise Sniper Confirmada
                   </span>
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Oportunidade Sniper</h2>
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Protocolo de Entrada</h2>
               </div>
 
               <SignalCard signal={activeSignal} />
               
               <div className="mt-8 p-10 glass rounded-[40px] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-6 pointer-events-none">
-                   <span className={`text-6xl font-black tabular-nums transition-colors ${secondsToNextCandle <= 10 ? 'text-rose-500' : 'text-blue-500/20'}`}>{secondsToNextCandle}</span>
-                </div>
+                {signalType === SignalType.BINARY && (
+                  <div className="absolute top-0 right-0 p-6 pointer-events-none">
+                    <span className={`text-6xl font-black tabular-nums transition-colors ${secondsToNextCandle <= 10 ? 'text-rose-500' : 'text-blue-500/20'}`}>{secondsToNextCandle}</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-5 mb-8">
                   <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${signalType === SignalType.BINARY ? 'border-emerald-500/30 bg-emerald-500/20' : 'border-blue-500/30 bg-blue-500/20'}`}>
@@ -351,22 +397,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Protocolo v12.1</h4>
-                    <p className={`text-xs font-bold uppercase tracking-wider ${signalType === SignalType.BINARY ? 'text-emerald-400/80' : 'text-blue-400/80'}`}>Atenção ao gerenciamento de risco (Stop/Meta)</p>
+                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Estratégia Sniper</h4>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${signalType === SignalType.BINARY ? 'text-emerald-400/80' : 'text-blue-400/80'}`}>Análise baseada em {activeSignal.timeframe}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
                     <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${signalType === SignalType.BINARY ? 'bg-emerald-500' : 'bg-blue-500'}`}>1</span>
-                    <p>Ative o par <span className="text-white font-bold">{activeSignal.pair}</span> agora.</p>
+                    <p>Ative o par <span className="text-white font-bold">{activeSignal.pair}</span> na corretora.</p>
                   </div>
                   <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${signalType === SignalType.BINARY ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-blue-500/20 border-blue-500/40'}`}>
                     <span className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">2</span>
-                    <p className="font-bold uppercase">
+                    <p className="font-bold uppercase text-[11px]">
                       {activeSignal.type === SignalType.FOREX 
-                        ? `Abra ordem de ${activeSignal.direction === 'CALL' ? 'BUY (COMPRA)' : 'SELL (VENDA)'} com os parâmetros acima.` 
-                        : `Clique em ${activeSignal.direction === 'CALL' ? 'COMPRAR' : 'VENDER'} exatamente no 00:00.`}
+                        ? `Entre como ${activeSignal.direction === 'CALL' ? 'BUY' : 'SELL'} e posicione os alvos de topo/fundo.` 
+                        : `Clique em ${activeSignal.direction === 'CALL' ? 'COMPRAR' : 'VENDER'} no início da vela.`}
                     </p>
                   </div>
                 </div>
@@ -376,9 +422,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </div>
       </main>
 
+      {/* GlobalChat component */}
+      <GlobalChat currentUserId={userId} />
+
       <footer className="glass border-t border-white/5 py-6 px-6 text-center">
         <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">
-          ULTRA TRADE VIP © 2026 | MULTI-STRATEGY ENGINE v12.1
+          ULTRA TRADE VIP © 2026 | TERMINAL SNIPER v12.1
         </p>
       </footer>
     </div>

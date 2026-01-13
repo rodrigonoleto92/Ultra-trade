@@ -7,7 +7,6 @@ import { APP_PASSWORDS, REMOTE_PASSWORDS_URL } from './constants';
 const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutos em milisegundos
 
 const App: React.FC = () => {
-  // Alterado de localStorage para sessionStorage para deslogar ao fechar a janela
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return !!sessionStorage.getItem('ultra_trade_session');
   });
@@ -28,7 +27,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Lógica de monitoramento de inatividade
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
       window.clearTimeout(inactivityTimerRef.current);
@@ -44,26 +42,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-
-    // Eventos que resetam o timer de inatividade
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
     const handleEvent = () => resetInactivityTimer();
-
-    events.forEach(event => {
-      document.addEventListener(event, handleEvent);
-    });
-
-    // Inicia o timer pela primeira vez
+    events.forEach(event => document.addEventListener(event, handleEvent));
     resetInactivityTimer();
-
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleEvent);
-      });
-      if (inactivityTimerRef.current) {
-        window.clearTimeout(inactivityTimerRef.current);
-      }
+      events.forEach(event => document.removeEventListener(event, handleEvent));
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
     };
   }, [isLoggedIn, resetInactivityTimer]);
 
@@ -80,20 +65,15 @@ const App: React.FC = () => {
 
   const validatePassword = useCallback(async (pass: string) => {
     if (APP_PASSWORDS.includes(pass)) return true;
-    
     const remoteList = await fetchRemotePasswords();
     if (remoteList.includes(pass)) return true;
-
-    // Verifica backup local caso necessário
     const localUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
     if (localUsers.includes(pass)) return true;
-
     return false;
   }, [fetchRemotePasswords]);
 
   useEffect(() => {
     if (!authPassword) return;
-
     const checkAccess = async () => {
       setIsVerifying(true);
       const isValid = await validatePassword(authPassword);
@@ -103,7 +83,6 @@ const App: React.FC = () => {
       }
       setIsVerifying(false);
     };
-
     const timer = setInterval(checkAccess, 5 * 60 * 1000);
     return () => clearInterval(timer);
   }, [authPassword, validatePassword, handleLogout]);
@@ -111,7 +90,6 @@ const App: React.FC = () => {
   const handleLogin = async (pass: string) => {
     setIsVerifying(true);
     const isValid = await validatePassword(pass);
-    
     if (isValid) {
       setAuthPassword(pass);
       setIsLoggedIn(true);
@@ -133,7 +111,8 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        <Dashboard onLogout={handleLogout} />
+        {/* Fixed: Pass currentUserId from authPassword */}
+        <Dashboard onLogout={handleLogout} userId={authPassword || 'anon_trader'} />
       </div>
     );
   }

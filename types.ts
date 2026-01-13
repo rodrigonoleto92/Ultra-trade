@@ -18,7 +18,11 @@ export enum SignalDirection {
 export enum Timeframe {
   M1 = '1 Minuto',
   M5 = '5 Minutos',
-  M15 = '15 Minutos'
+  M15 = '15 Minutos',
+  M30 = '30 Minutos',
+  H1 = '1 Hora',
+  H4 = '4 Horas',
+  D1 = '1 Dia'
 }
 
 export interface Signal {
@@ -27,14 +31,11 @@ export interface Signal {
   direction: SignalDirection;
   timeframe: Timeframe;
   type: SignalType;
-  // Campos para OB
   entryTime?: string;
   expirationTime?: string;
-  // Campos para Forex
   entryPrice?: string;
   stopLoss?: string;
   takeProfit?: string;
-  
   confidence: number;
   strategy: string;
   timestamp: number;
@@ -43,4 +44,15 @@ export interface Signal {
 export interface CurrencyPair {
   symbol: string;
   type: MarketType;
+}
+
+// Fixed: Export ChatMessage interface used by GlobalChat.tsx
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  text?: string;
+  image?: string;
+  timestamp: number;
+  isStaff?: boolean;
 }

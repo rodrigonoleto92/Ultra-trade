@@ -50,17 +50,17 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
         {isForex ? (
           <div className="space-y-4 mb-6">
             <div className="bg-slate-900/80 p-4 rounded-2xl flex justify-between items-center border border-white/5 shadow-inner">
-              <span className="text-[11px] text-slate-500 uppercase font-black tracking-[0.2em]">Entrada</span>
-              <span className="text-lg font-mono font-black text-blue-400">{signal.entryPrice}</span>
+              <span className="text-[11px] text-slate-500 uppercase font-black tracking-[0.2em]">Execução</span>
+              <span className="text-sm font-mono font-black text-blue-400">À Mercado (Mkt)</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/30 text-center flex flex-col items-center justify-center min-h-[90px] shadow-sm">
-                <p className="text-[10px] text-rose-500 uppercase font-black mb-1 tracking-widest">STOP LOSS</p>
-                <p className="text-base font-mono font-black text-white tracking-wider">{signal.stopLoss || '1.0% (Fixo)'}</p>
+                <p className="text-[10px] text-rose-500 uppercase font-black mb-1 tracking-widest">PROTEÇÃO (SL)</p>
+                <p className="text-[11px] font-bold text-white uppercase leading-tight">{signal.stopLoss}</p>
               </div>
               <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/30 text-center flex flex-col items-center justify-center min-h-[90px] shadow-sm">
-                <p className="text-[10px] text-emerald-500 uppercase font-black mb-1 tracking-widest">TAKE PROFIT</p>
-                <p className="text-base font-mono font-black text-white tracking-wider">{signal.takeProfit || '2.0% (Fixo)'}</p>
+                <p className="text-[10px] text-emerald-500 uppercase font-black mb-1 tracking-widest">LUCRO (TP)</p>
+                <p className="text-[11px] font-bold text-white uppercase leading-tight">{signal.takeProfit}</p>
               </div>
             </div>
           </div>
@@ -78,7 +78,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
         )}
 
         <div className="mt-2 bg-slate-900/40 p-4 rounded-xl border border-white/5">
-          <strong className="text-slate-500 font-black uppercase text-[10px] tracking-widest block mb-2">Protocolo de Análise:</strong> 
+          <strong className="text-slate-500 font-black uppercase text-[10px] tracking-widest block mb-2">Análise Técnica:</strong> 
           <p className="text-xs text-slate-300 leading-relaxed font-medium italic">"{signal.strategy}"</p>
         </div>
       </div>
