@@ -95,9 +95,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       if (assetCategory === 'CRYPTO') {
         availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.CRYPTO);
       } else {
-        availablePairs = forexIsReal 
-          ? ALL_PAIRS.filter(p => p.type === MarketType.FOREX)
-          : ALL_PAIRS.filter(p => p.type === MarketType.OTC);
+        // Se a operação for Forex, usamos sempre os pares de Forex Real
+        if (signalType === SignalType.FOREX) {
+          availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.FOREX);
+        } else {
+          // Se for Binárias, decide entre Real ou OTC baseado no horário
+          availablePairs = forexIsReal 
+            ? ALL_PAIRS.filter(p => p.type === MarketType.FOREX)
+            : ALL_PAIRS.filter(p => p.type === MarketType.OTC);
+        }
       }
 
       const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
@@ -112,10 +118,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       if (shuffledPairs.length > 0) {
         const winnerPair = shuffledPairs[0].symbol;
+        const isActuallyOTC = signalType === SignalType.BINARY && !forexIsReal && assetCategory === 'MOEDAS';
         const newSignal = await generateSignal(
           winnerPair, 
           selectedTimeframe, 
-          assetCategory === 'MOEDAS' ? !forexIsReal : false,
+          isActuallyOTC,
           signalType
         );
         
@@ -146,8 +153,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
 
   const forexIsReal = isForexRealMarket();
-  const currentMarketLabel = assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsReal ? 'MERCADO REAL ABERTO' : 'MERCADO EM OTC');
-  const marketStatusColor = assetCategory === 'CRYPTO' || forexIsReal ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' : 'text-amber-400 border-amber-500/30 bg-amber-500/5';
+  
+  // Lógica de label solicitada: Quando em Forex, mostrar sempre Mercado Real
+  const isActuallyRealMarket = signalType === SignalType.FOREX || assetCategory === 'CRYPTO' || forexIsReal;
+  
+  const currentMarketLabel = signalType === SignalType.FOREX
+    ? (assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : 'MERCADO REAL (FOREX)')
+    : (assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsReal ? 'MERCADO REAL ABERTO' : 'MERCADO EM OTC'));
+
+  const marketStatusColor = isActuallyRealMarket 
+    ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' 
+    : 'text-amber-400 border-amber-500/30 bg-amber-500/5';
   
   const currentTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
 
@@ -159,7 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             <Logo size="sm" />
             <div className="hidden md:flex flex-col border-l border-white/10 pl-6">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full animate-pulse ${assetCategory === 'CRYPTO' || forexIsReal ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></span>
+                <span className={`h-2 w-2 rounded-full animate-pulse ${isActuallyRealMarket ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
                   IA MULTI-TRADE VIP v12.1
                 </span>
