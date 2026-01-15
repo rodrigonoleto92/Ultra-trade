@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ALL_PAIRS, BINARY_TIMEFRAMES, FOREX_TIMEFRAMES } from '../constants';
+import { ALL_PAIRS, BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS } from '../constants';
 import { Signal, Timeframe, SignalDirection, MarketType, SignalType } from '../types';
 import { generateSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
@@ -16,6 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
+  const [selectedPairSymbol, setSelectedPairSymbol] = useState<string>('');
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [pendingSignal, setPendingSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -34,14 +35,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     return (hour >= 4 && hour < 16);
   };
 
-  // Garante que o timeframe selecionado é válido para o modo atual
+  // Garante que o timeframe e o ativo selecionado sejam válidos para o modo atual
   useEffect(() => {
     const currentValidTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
-    const isValid = currentValidTimeframes.some(tf => tf.value === selectedTimeframe);
-    if (!isValid) {
+    const isValidTF = currentValidTimeframes.some(tf => tf.value === selectedTimeframe);
+    if (!isValidTF) {
       setSelectedTimeframe(Timeframe.M1);
     }
-  }, [signalType, selectedTimeframe]);
+
+    // Reset de par ao trocar tipo ou categoria
+    const availablePairs = getAvailablePairs();
+    if (availablePairs.length > 0 && (!selectedPairSymbol || !availablePairs.some(p => p.symbol === selectedPairSymbol))) {
+      setSelectedPairSymbol(availablePairs[0].symbol);
+    }
+  }, [signalType, assetCategory]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -86,38 +93,44 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     return () => clearInterval(timer);
   }, [selectedTimeframe, assetCategory, signalType, isScanning, currentTime, pendingSignal]);
 
-  const handleScanAndBuffer = async () => {
+  const getAvailablePairs = () => {
+    const forexIsReal = isForexRealMarket();
+    if (assetCategory === 'CRYPTO') {
+      return CRYPTO_PAIRS;
+    } else {
+      if (signalType === SignalType.FOREX) {
+        return FOREX_PAIRS;
+      } else {
+        return forexIsReal ? FOREX_PAIRS : OTC_PAIRS;
+      }
+    }
+  };
+
+  const handleScanAndBuffer = async (manualSymbol?: string) => {
     setIsScanning(true);
     try {
       const forexIsReal = isForexRealMarket();
-      let availablePairs = [];
+      let winnerPair = '';
 
-      if (assetCategory === 'CRYPTO') {
-        availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.CRYPTO);
+      if (manualSymbol) {
+        winnerPair = manualSymbol;
+        setCurrentScanningPair({ symbol: manualSymbol, type: assetCategory });
+        await new Promise(r => setTimeout(r, 1200)); 
       } else {
-        // Se a operação for Forex, usamos sempre os pares de Forex Real
-        if (signalType === SignalType.FOREX) {
-          availablePairs = ALL_PAIRS.filter(p => p.type === MarketType.FOREX);
-        } else {
-          // Se for Binárias, decide entre Real ou OTC baseado no horário
-          availablePairs = forexIsReal 
-            ? ALL_PAIRS.filter(p => p.type === MarketType.FOREX)
-            : ALL_PAIRS.filter(p => p.type === MarketType.OTC);
+        const availablePairs = getAvailablePairs();
+        const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
+        
+        for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
+          setCurrentScanningPair({
+            symbol: shuffledPairs[i].symbol,
+            type: shuffledPairs[i].type
+          });
+          await new Promise(r => setTimeout(r, 450)); 
         }
+        winnerPair = shuffledPairs[0]?.symbol || '';
       }
 
-      const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
-      
-      for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
-        setCurrentScanningPair({
-          symbol: shuffledPairs[i].symbol,
-          type: shuffledPairs[i].type
-        });
-        await new Promise(r => setTimeout(r, 450)); 
-      }
-
-      if (shuffledPairs.length > 0) {
-        const winnerPair = shuffledPairs[0].symbol;
+      if (winnerPair) {
         const isActuallyOTC = signalType === SignalType.BINARY && !forexIsReal && assetCategory === 'MOEDAS';
         const newSignal = await generateSignal(
           winnerPair, 
@@ -143,7 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const handleManualForexScan = () => {
     if (isScanning) return;
     setActiveSignal(null);
-    handleScanAndBuffer();
+    handleScanAndBuffer(selectedPairSymbol);
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -153,8 +166,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
 
   const forexIsReal = isForexRealMarket();
-  
-  // Lógica de label solicitada: Quando em Forex, mostrar sempre Mercado Real
   const isActuallyRealMarket = signalType === SignalType.FOREX || assetCategory === 'CRYPTO' || forexIsReal;
   
   const currentMarketLabel = signalType === SignalType.FOREX
@@ -166,6 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     : 'text-amber-400 border-amber-500/30 bg-amber-500/5';
   
   const currentTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
+  const currentAvailablePairs = getAvailablePairs();
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col relative">
@@ -289,6 +301,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
               </div>
 
+              {signalType === SignalType.FOREX && (
+                <div className="animate-in fade-in slide-in-from-left-4">
+                  <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Escolher Ativo</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
+                    {currentAvailablePairs.map(p => (
+                      <button
+                        key={p.symbol}
+                        onClick={() => setSelectedPairSymbol(p.symbol)}
+                        className={`py-2 px-1 rounded-lg text-[9px] font-bold transition-all border truncate ${
+                          selectedPairSymbol === p.symbol
+                            ? 'border-blue-500 bg-blue-500/20 text-blue-200'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-500 hover:border-slate-600'
+                        }`}
+                      >
+                        {p.symbol}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Tempo Gráfico</label>
                 <div className={`grid ${currentTimeframes.length > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
@@ -326,14 +359,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   {isScanning ? (
                     <>
                       <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm font-black text-white uppercase tracking-widest">IA Escaneando...</span>
+                      <span className="text-sm font-black text-white uppercase tracking-widest">IA Escaneando {selectedPairSymbol}...</span>
                     </>
                   ) : (
                     <>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      <span className="text-sm font-black text-white uppercase tracking-widest">GERAR SINAL FOREX IA</span>
+                      <span className="text-sm font-black text-white uppercase tracking-widest">ANALISAR {selectedPairSymbol}</span>
                     </>
                   )}
                 </button>
@@ -371,7 +404,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 bg-slate-900/40 border-white/5`}>
                     <p className="text-sm text-slate-300 font-medium leading-relaxed">
                       {signalType === SignalType.FOREX 
-                        ? `A análise em ${selectedTimeframe} está pronta para ser executada. Clique no botão azul acima para iniciar o scanner de topos e fundos.`
+                        ? `Selecione o ativo ${selectedPairSymbol} ou outro da lista e clique em Analisar acima.`
                         : (secondsToNextCandle > 45 
                           ? 'Monitorando padrões estruturais Sniper. Sinais liberados nos últimos 15s de cada vela.'
                           : pendingSignal 

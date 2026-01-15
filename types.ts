@@ -39,6 +39,8 @@ export interface Signal {
   confidence: number;
   strategy: string;
   timestamp: number;
+  buyerPercentage: number;
+  sellerPercentage: number;
 }
 
 export interface CurrencyPair {

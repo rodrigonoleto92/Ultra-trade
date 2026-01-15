@@ -2,6 +2,7 @@
 import { CurrencyPair, MarketType, Timeframe } from './types';
 
 export const FOREX_PAIRS: CurrencyPair[] = [
+  { symbol: 'XAU/USD', type: MarketType.FOREX },
   { symbol: 'EUR/USD', type: MarketType.FOREX },
   { symbol: 'GBP/USD', type: MarketType.FOREX },
   { symbol: 'USD/JPY', type: MarketType.FOREX },

@@ -34,15 +34,21 @@ export async function generateSignal(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const prompt = type === SignalType.BINARY 
-      ? `IA ESTRATÉGICA V12.1 - OPÇÕES BINÁRIAS - ${isOTC ? 'MERCADO OTC' : 'MERCADO REAL'}:
-         Ativo: ${pair} | Timeframe: ${timeframe}
-         Gere sinal para abertura de vela das ${entryTime}.
-         Responda em JSON: { "direction": "CALL"|"PUT", "confidence": 96-99, "analysis": "..." }`
-      : `IA ANALISTA DE PRICE ACTION V12.1 - FOREX / CRIPTO:
-         Ativo: ${pair} | Timeframe: ${timeframe}
-         Identifique a melhor entrada técnica baseada em SUPORTE E RESISTÊNCIA.
-         Responda em JSON: { "direction": "CALL"|"PUT", "confidence": 92-98, "analysis": "..." }`;
+    const prompt = `IA ANALISTA SNIPER V12.1:
+         Ativo: ${pair} | Timeframe Principal: ${timeframe} | Modo: ${type} ${isOTC ? 'OTC' : ''}
+         
+         REQUISITOS:
+         1. Analise o gráfico para o sinal imediato.
+         2. Forneça o Delta de Volume (sentimento de compradores vs vendedores) para o timeframe atual.
+         
+         Responda estritamente em JSON:
+         {
+           "direction": "CALL"|"PUT",
+           "confidence": 90-99,
+           "buyerPercent": 0-100,
+           "sellerPercent": 0-100,
+           "analysis": "..."
+         }`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -54,9 +60,11 @@ export async function generateSignal(
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
+            buyerPercent: { type: Type.NUMBER },
+            sellerPercent: { type: Type.NUMBER },
             analysis: { type: Type.STRING },
           },
-          required: ['direction', 'confidence', 'analysis'],
+          required: ['direction', 'confidence', 'buyerPercent', 'sellerPercent', 'analysis'],
         },
       },
     });
@@ -65,7 +73,6 @@ export async function generateSignal(
     const isForexType = type === SignalType.FOREX;
     const direction = (data.direction as SignalDirection) || SignalDirection.CALL;
 
-    // Lógica de Stop e Take baseada em topos e fundos conforme solicitado
     let sl = 'N/A';
     let tp = 'N/A';
 
@@ -91,7 +98,9 @@ export async function generateSignal(
       stopLoss: sl,
       takeProfit: tp,
       confidence: data.confidence || 95,
-      strategy: data.analysis || 'Análise de estrutura de mercado confirmada.',
+      buyerPercentage: data.buyerPercent || 50,
+      sellerPercentage: data.sellerPercent || 50,
+      strategy: data.analysis || 'Análise de price action confirmada pela IA.',
       timestamp: Date.now()
     };
 
@@ -112,6 +121,8 @@ export async function generateSignal(
       }
     }
 
+    const bPct = Math.floor(Math.random() * 40) + 30;
+
     return {
       id: generateVIPId(type),
       pair,
@@ -124,7 +135,9 @@ export async function generateSignal(
       stopLoss: sl,
       takeProfit: tp,
       confidence: 88,
-      strategy: 'Erro na API. Usando análise técnica padrão de topos e fundos.',
+      buyerPercentage: bPct,
+      sellerPercentage: 100 - bPct,
+      strategy: 'Erro na API. Usando análise técnica padrão.',
       timestamp: Date.now()
     };
   }
