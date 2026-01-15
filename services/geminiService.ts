@@ -34,12 +34,13 @@ export async function generateSignal(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const prompt = `IA ANALISTA SNIPER V12.1:
+    const prompt = `IA ANALISTA SNIPER V12.1 - TRADING PROFISSIONAL:
          Ativo: ${pair} | Timeframe Principal: ${timeframe} | Modo: ${type} ${isOTC ? 'OTC' : ''}
          
-         REQUISITOS:
-         1. Analise o gráfico para o sinal imediato.
+         REQUISITOS OBRIGATÓRIOS:
+         1. Analise o gráfico para o sinal imediato baseado em Price Action e Volume.
          2. Forneça o Delta de Volume (sentimento de compradores vs vendedores) para o timeframe atual.
+         3. O campo "analysis" DEVE ser escrito em PORTUGUÊS DO BRASIL, justificando tecnicamente o sinal (ex: rompimento de suporte, exaustão de volume, etc).
          
          Responda estritamente em JSON:
          {
@@ -47,7 +48,7 @@ export async function generateSignal(
            "confidence": 90-99,
            "buyerPercent": 0-100,
            "sellerPercent": 0-100,
-           "analysis": "..."
+           "analysis": "Texto em português justificando a entrada..."
          }`;
 
     const response = await ai.models.generateContent({
@@ -100,7 +101,7 @@ export async function generateSignal(
       confidence: data.confidence || 95,
       buyerPercentage: data.buyerPercent || 50,
       sellerPercentage: data.sellerPercent || 50,
-      strategy: data.analysis || 'Análise de price action confirmada pela IA.',
+      strategy: data.analysis || 'Análise técnica de fluxo confirmada pela IA.',
       timestamp: Date.now()
     };
 
@@ -137,7 +138,7 @@ export async function generateSignal(
       confidence: 88,
       buyerPercentage: bPct,
       sellerPercentage: 100 - bPct,
-      strategy: 'Erro na API. Usando análise técnica padrão.',
+      strategy: 'Erro na conexão. Aplicando estratégia padrão de reversão em suporte/resistência.',
       timestamp: Date.now()
     };
   }

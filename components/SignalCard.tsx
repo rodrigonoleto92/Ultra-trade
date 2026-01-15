@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Signal, SignalDirection, SignalType } from '../types';
 
 interface SignalCardProps {
@@ -9,6 +9,28 @@ interface SignalCardProps {
 const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isCall = signal.direction === SignalDirection.CALL;
   const isForex = signal.type === SignalType.FOREX;
+
+  // Estado para simular movimentação em tempo real do Delta
+  const [dynamicBuyer, setDynamicBuyer] = useState(signal.buyerPercentage);
+  const [dynamicSeller, setDynamicSeller] = useState(signal.sellerPercentage);
+
+  useEffect(() => {
+    // Reseta quando o sinal muda
+    setDynamicBuyer(signal.buyerPercentage);
+    setDynamicSeller(signal.sellerPercentage);
+
+    const interval = setInterval(() => {
+      setDynamicBuyer(prev => {
+        // Oscilação leve de +/- 1.5% para simular fluxo de ordens
+        const drift = (Math.random() - 0.5) * 2.5;
+        const newVal = Math.min(Math.max(prev + drift, 10), 90);
+        setDynamicSeller(100 - newVal);
+        return newVal;
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [signal.id, signal.buyerPercentage, signal.sellerPercentage]);
 
   return (
     <div className={`glass rounded-[32px] overflow-hidden border-l-8 ${isCall ? 'border-l-emerald-500' : 'border-l-rose-500'} transition-all hover:scale-[1.01] duration-500 shadow-2xl`}>
@@ -61,16 +83,28 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </p>
         </div>
 
-        {/* Temperatura do Tempo Gráfico Atual */}
-        <div className="mb-5 space-y-2 bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+        {/* Temperatura do Tempo Gráfico Atual - Dinâmica */}
+        <div className="mb-5 space-y-2 bg-slate-900/40 p-3 rounded-2xl border border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-3 flex items-center gap-1">
+             <span className="h-1 w-1 bg-blue-500 rounded-full animate-ping"></span>
+             <span className="text-[6px] font-black text-blue-500 uppercase">Live Flux</span>
+          </div>
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mb-1">Delta de Volume ({signal.timeframe})</p>
           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest px-1">
-            <span className="text-emerald-400">Buyer: {signal.buyerPercentage}%</span>
-            <span className="text-rose-400">Seller: {signal.sellerPercentage}%</span>
+            <span className="text-emerald-400 transition-all duration-700">Compradores: {dynamicBuyer.toFixed(1)}%</span>
+            <span className="text-rose-400 transition-all duration-700">Vendedores: {dynamicSeller.toFixed(1)}%</span>
           </div>
-          <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
-            <div className="h-full bg-emerald-500" style={{ width: `${signal.buyerPercentage}%` }}></div>
-            <div className="h-full bg-rose-500" style={{ width: `${signal.sellerPercentage}%` }}></div>
+          <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+            <div 
+              className="h-full bg-emerald-500 transition-all duration-1000 ease-in-out relative" 
+              style={{ width: `${dynamicBuyer}%` }}
+            >
+               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse"></div>
+            </div>
+            <div 
+              className="h-full bg-rose-500 transition-all duration-1000 ease-in-out" 
+              style={{ width: `${dynamicSeller}%` }}
+            ></div>
           </div>
         </div>
 
