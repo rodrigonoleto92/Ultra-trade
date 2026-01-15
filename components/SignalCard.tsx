@@ -47,6 +47,20 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
         </div>
 
+        {/* Instrução Estratégica VIP (POC / Correção) */}
+        <div className={`mb-5 p-4 rounded-2xl border flex items-start gap-3 ${isCall ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}`}>
+          <div className={`mt-0.5 p-1 rounded-md ${isCall ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isCall ? 'text-emerald-400' : 'text-rose-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className={`text-[11px] font-bold uppercase leading-relaxed ${isCall ? 'text-emerald-300' : 'text-rose-300'}`}>
+            DICA SNIPER: {isCall 
+              ? 'Compre sempre em uma correção, ou seja, próximo à POC (região com alto volume de compradores).' 
+              : 'Venda sempre na correção, ou seja, próximo à POC (região com alto volume de vendedores).'}
+          </p>
+        </div>
+
         {/* Temperatura do Tempo Gráfico Atual */}
         <div className="mb-5 space-y-2 bg-slate-900/40 p-3 rounded-2xl border border-white/5">
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mb-1">Delta de Volume ({signal.timeframe})</p>
