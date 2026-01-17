@@ -33,37 +33,31 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const month = currentTime.getMonth() + 1;
     const date = currentTime.getDate();
     
-    // Finais de semana (Sábado = 6, Domingo = 0)
+    // Sábado = 6, Domingo = 0
     const isWeekend = day === 0 || day === 6;
-    
-    // Feriados Internacionais Principais (Exemplo: Natal e Ano Novo)
     const isHoliday = (month === 12 && date === 25) || (month === 1 && date === 1);
 
     if (isWeekend || isHoliday) return false;
     
-    // Horário de funcionamento simplificado (Seg-Sex)
-    // Forex real fecha Sexta às 18h e abre Domingo às 18h (BRT)
     if (day === 5 && currentTime.getHours() >= 18) return false;
     if (day === 0 && currentTime.getHours() < 18) return false;
 
     return true;
   };
 
-  // Efeito para monitorar status do mercado e exibir mensagem proativa
   useEffect(() => {
+    // Bloqueio apenas para Forex Moedas
     if (signalType === SignalType.FOREX && assetCategory === 'MOEDAS' && !isForexOpenTime()) {
       setMarketStatusMsg("MERCADO FECHADO: O mercado de Forex (Moedas) não opera aos finais de semana ou feriados bancários.");
       setActiveSignal(null);
       setPendingSignal(null);
     } else {
-      // Se mudar para Crypto ou se o mercado abrir, limpa a mensagem de erro
       if (marketStatusMsg?.includes("MERCADO FECHADO")) {
         setMarketStatusMsg(null);
       }
     }
   }, [signalType, assetCategory, currentTime]);
 
-  // Garante que o timeframe e o ativo selecionado sejam válidos para o modo atual
   useEffect(() => {
     const currentValidTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
     const isValidTF = currentValidTimeframes.some(tf => tf.value === selectedTimeframe);
@@ -71,7 +65,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       setSelectedTimeframe(Timeframe.M1);
     }
 
-    // Reset de par ao trocar tipo ou categoria
     const availablePairs = getAvailablePairs();
     if (availablePairs.length > 0 && (!selectedPairSymbol || !availablePairs.some(p => p.symbol === selectedPairSymbol))) {
       setSelectedPairSymbol(availablePairs[0].symbol);
@@ -93,21 +86,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
       setSecondsToNextCandle(tfSeconds);
 
-      // Limpa sinais de Binárias ao virar a vela
       if (tfSeconds >= 59 && signalType === SignalType.BINARY) {
         setActiveSignal(null);
         setPendingSignal(null);
-        if (!marketStatusMsg?.includes("MERCADO FECHADO")) {
+        if (marketStatusMsg && !marketStatusMsg.includes("MERCADO FECHADO")) {
           setMarketStatusMsg(null);
         }
       }
 
-      // Lógica AUTOMÁTICA apenas para BINÁRIAS
       if (signalType === SignalType.BINARY) {
         const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
         
-        // Bloqueio apenas se for Forex Moedas. OTC e Crypto continuam.
-        const isBlocked = assetCategory === 'MOEDAS' && !isForexOpenTime() && signalType === SignalType.FOREX;
+        // Em binárias não bloqueamos moedas (usa OTC), então isBlocked é sempre false aqui.
+        const isBlocked = false;
 
         if (!isBlocked && !isScanning && tfSeconds === 45) {
           if (lastTriggeredCandleRef.current !== triggerId) {
@@ -136,22 +127,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       if (signalType === SignalType.FOREX) {
         return FOREX_PAIRS;
       } else {
-        // Para binárias: se fechado usa OTC, se aberto usa real.
         return forexIsOpen ? FOREX_PAIRS : OTC_PAIRS;
       }
     }
   };
 
   const handleScanAndBuffer = async (manualSymbol?: string) => {
-    // Bloqueio rigoroso apenas para Forex (Moedas) em final de semana/feriado
     if (signalType === SignalType.FOREX && assetCategory === 'MOEDAS' && !isForexOpenTime()) {
       setMarketStatusMsg("MERCADO FECHADO: O mercado de Forex não opera aos finais de semana ou feriados bancários.");
       return;
     }
 
     setIsScanning(true);
-    // Só reseta a mensagem se não for a de mercado fechado (que é persistente)
-    if (!marketStatusMsg?.includes("MERCADO FECHADO")) {
+    if (marketStatusMsg && !marketStatusMsg.includes("MERCADO FECHADO")) {
       setMarketStatusMsg(null);
     }
     
@@ -178,9 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       }
 
       if (winnerPair) {
-        // No modo binárias moedas, se o forex real estiver fechado, consideramos como OTC para a IA
         const isActuallyOTC = signalType === SignalType.BINARY && !forexIsOpen && assetCategory === 'MOEDAS';
-        
         const newSignal = await generateSignal(
           winnerPair, 
           selectedTimeframe, 
@@ -215,7 +201,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
 
   const forexIsOpen = isForexOpenTime();
-  // Crypto é sempre mercado real aberto. Moedas depende do horário Forex.
   const isActuallyRealMarket = assetCategory === 'CRYPTO' || (assetCategory === 'MOEDAS' && forexIsOpen);
   
   const currentMarketLabel = signalType === SignalType.FOREX
