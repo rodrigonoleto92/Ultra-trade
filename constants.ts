@@ -2,7 +2,6 @@
 import { CurrencyPair, MarketType, Timeframe } from './types';
 
 export const FOREX_PAIRS: CurrencyPair[] = [
-  { symbol: 'XAU/USD', type: MarketType.FOREX },
   { symbol: 'EUR/USD', type: MarketType.FOREX },
   { symbol: 'GBP/USD', type: MarketType.FOREX },
   { symbol: 'USD/JPY', type: MarketType.FOREX },
@@ -20,6 +19,7 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'AUD/USD (OTC)', type: MarketType.OTC },
   { symbol: 'USD/CHF (OTC)', type: MarketType.OTC },
   { symbol: 'EUR/GBP (OTC)', type: MarketType.OTC },
+  { symbol: 'XAU/USD (OTC)', type: MarketType.OTC },
 ];
 
 export const CRYPTO_PAIRS: CurrencyPair[] = [
