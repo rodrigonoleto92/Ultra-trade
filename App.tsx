@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import { APP_PASSWORDS, REMOTE_PASSWORDS_URL } from './constants';
+import { APP_USERS, REMOTE_PASSWORDS_URL } from './constants';
 
-const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutos em milisegundos
+const INACTIVITY_LIMIT = 10 * 60 * 1000;
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -14,6 +14,10 @@ const App: React.FC = () => {
   const [authPassword, setAuthPassword] = useState<string | null>(() => {
     return sessionStorage.getItem('ultra_trade_session');
   });
+
+  const [userName, setUserName] = useState<string>(() => {
+    return sessionStorage.getItem('ultra_trade_user') || 'Trader';
+  });
   
   const [isVerifying, setIsVerifying] = useState(false);
   const inactivityTimerRef = useRef<number | null>(null);
@@ -22,6 +26,7 @@ const App: React.FC = () => {
     setAuthPassword(null);
     setIsLoggedIn(false);
     sessionStorage.removeItem('ultra_trade_session');
+    sessionStorage.removeItem('ultra_trade_user');
     if (inactivityTimerRef.current) {
       window.clearTimeout(inactivityTimerRef.current);
     }
@@ -63,20 +68,27 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const validatePassword = useCallback(async (pass: string) => {
-    if (APP_PASSWORDS.includes(pass)) return true;
+  const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
+    // Busca na lista de usuários fixos
+    const user = APP_USERS.find(u => u.key === pass);
+    if (user) return { isValid: true, name: user.name };
+
+    // Busca na lista remota (formato chave)
     const remoteList = await fetchRemotePasswords();
-    if (remoteList.includes(pass)) return true;
+    if (remoteList.includes(pass)) return { isValid: true, name: 'Trader VIP' };
+
+    // Busca no registro local
     const localUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
-    if (localUsers.includes(pass)) return true;
-    return false;
+    if (localUsers.includes(pass)) return { isValid: true, name: 'Trader Registrado' };
+
+    return { isValid: false };
   }, [fetchRemotePasswords]);
 
   useEffect(() => {
     if (!authPassword) return;
     const checkAccess = async () => {
       setIsVerifying(true);
-      const isValid = await validatePassword(authPassword);
+      const { isValid } = await validateUser(authPassword);
       if (!isValid) {
         handleLogout();
         alert("Sessão expirada ou acesso revogado.");
@@ -85,15 +97,18 @@ const App: React.FC = () => {
     };
     const timer = setInterval(checkAccess, 5 * 60 * 1000);
     return () => clearInterval(timer);
-  }, [authPassword, validatePassword, handleLogout]);
+  }, [authPassword, validateUser, handleLogout]);
 
   const handleLogin = async (pass: string) => {
     setIsVerifying(true);
-    const isValid = await validatePassword(pass);
+    const { isValid, name } = await validateUser(pass);
     if (isValid) {
+      const finalName = name || 'Trader';
       setAuthPassword(pass);
+      setUserName(finalName);
       setIsLoggedIn(true);
       sessionStorage.setItem('ultra_trade_session', pass);
+      sessionStorage.setItem('ultra_trade_user', finalName);
     } else {
       throw new Error("Acesso negado");
     }
@@ -111,7 +126,7 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        <Dashboard onLogout={handleLogout} />
+        <Dashboard onLogout={handleLogout} userName={userName} />
       </div>
     );
   }

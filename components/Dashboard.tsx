@@ -8,11 +8,12 @@ import Logo from './Logo';
 
 interface DashboardProps {
   onLogout: () => void;
+  userName?: string;
 }
 
 type AssetCategory = 'MOEDAS' | 'CRYPTO';
 
-const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader' }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
@@ -32,21 +33,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const day = currentTime.getDay(); 
     const month = currentTime.getMonth() + 1;
     const date = currentTime.getDate();
-    
-    // Sábado = 6, Domingo = 0
     const isWeekend = day === 0 || day === 6;
     const isHoliday = (month === 12 && date === 25) || (month === 1 && date === 1);
-
     if (isWeekend || isHoliday) return false;
-    
     if (day === 5 && currentTime.getHours() >= 18) return false;
     if (day === 0 && currentTime.getHours() < 18) return false;
-
     return true;
   };
 
   useEffect(() => {
-    // Bloqueio apenas para Forex Moedas
     if (signalType === SignalType.FOREX && assetCategory === 'MOEDAS' && !isForexOpenTime()) {
       setMarketStatusMsg("MERCADO FECHADO: O mercado de Forex (Moedas) não opera aos finais de semana ou feriados bancários.");
       setActiveSignal(null);
@@ -64,7 +59,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     if (!isValidTF) {
       setSelectedTimeframe(Timeframe.M1);
     }
-
     const availablePairs = getAvailablePairs();
     if (availablePairs.length > 0 && (!selectedPairSymbol || !availablePairs.some(p => p.symbol === selectedPairSymbol))) {
       setSelectedPairSymbol(availablePairs[0].symbol);
@@ -75,17 +69,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const timer = setInterval(() => {
       const now = new Date();
       setCurrentTime(now);
-      
       const seconds = now.getSeconds();
       const minutes = now.getMinutes();
-      
       let tfSeconds = 60;
       if (selectedTimeframe === Timeframe.M1) tfSeconds = 60 - seconds;
       else if (selectedTimeframe === Timeframe.M5) tfSeconds = (5 * 60) - ((minutes % 5) * 60 + seconds);
       else if (selectedTimeframe === Timeframe.M15) tfSeconds = (15 * 60) - ((minutes % 15) * 60 + seconds);
-
       setSecondsToNextCandle(tfSeconds);
-
       if (tfSeconds >= 59 && signalType === SignalType.BINARY) {
         setActiveSignal(null);
         setPendingSignal(null);
@@ -93,20 +83,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           setMarketStatusMsg(null);
         }
       }
-
       if (signalType === SignalType.BINARY) {
         const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
-        
-        // Em binárias não bloqueamos moedas (usa OTC), então isBlocked é sempre false aqui.
-        const isBlocked = false;
-
-        if (!isBlocked && !isScanning && tfSeconds === 45) {
+        if (!isScanning && tfSeconds === 45) {
           if (lastTriggeredCandleRef.current !== triggerId) {
             lastTriggeredCandleRef.current = triggerId;
             handleScanAndBuffer();
           }
         }
-
         if (pendingSignal && tfSeconds === 30) {
           setActiveSignal(pendingSignal);
           setPendingSignal(null);
@@ -114,7 +98,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           setTimeout(() => setFlashActive(false), 800);
         }
       }
-      
     }, 1000);
     return () => clearInterval(timer);
   }, [selectedTimeframe, assetCategory, signalType, isScanning, currentTime, pendingSignal, marketStatusMsg]);
@@ -137,16 +120,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       setMarketStatusMsg("MERCADO FECHADO: O mercado de Forex não opera aos finais de semana ou feriados bancários.");
       return;
     }
-
     setIsScanning(true);
     if (marketStatusMsg && !marketStatusMsg.includes("MERCADO FECHADO")) {
       setMarketStatusMsg(null);
     }
-    
     try {
       const forexIsOpen = isForexOpenTime();
       let winnerPair = '';
-
       if (manualSymbol) {
         winnerPair = manualSymbol;
         setCurrentScanningPair({ symbol: manualSymbol, type: assetCategory });
@@ -154,26 +134,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       } else {
         const availablePairs = getAvailablePairs();
         const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
-        
         for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
-          setCurrentScanningPair({
-            symbol: shuffledPairs[i].symbol,
-            type: shuffledPairs[i].type
-          });
+          setCurrentScanningPair({ symbol: shuffledPairs[i].symbol, type: shuffledPairs[i].type });
           await new Promise(r => setTimeout(r, 450)); 
         }
         winnerPair = shuffledPairs[0]?.symbol || '';
       }
-
       if (winnerPair) {
         const isActuallyOTC = signalType === SignalType.BINARY && !forexIsOpen && assetCategory === 'MOEDAS';
-        const newSignal = await generateSignal(
-          winnerPair, 
-          selectedTimeframe, 
-          isActuallyOTC,
-          signalType
-        );
-        
+        const newSignal = await generateSignal(winnerPair, selectedTimeframe, isActuallyOTC, signalType);
         if (signalType === SignalType.BINARY) {
           setPendingSignal(newSignal);
         } else {
@@ -202,7 +171,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const forexIsOpen = isForexOpenTime();
   const isActuallyRealMarket = assetCategory === 'CRYPTO' || (assetCategory === 'MOEDAS' && forexIsOpen);
-  
   const currentMarketLabel = signalType === SignalType.FOREX
     ? (assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsOpen ? 'MERCADO REAL (FOREX)' : 'MERCADO FECHADO'))
     : (assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsOpen ? 'MERCADO REAL ABERTO' : 'MERCADO EM OTC'));
@@ -224,10 +192,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             <Logo size="sm" />
             <div className="hidden md:flex flex-col border-l border-white/10 pl-6">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full animate-pulse ${isActuallyRealMarket ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  IA MULTI-TRADE VIP v12.1
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Olá, <span className="logo-gradient-text">{userName}</span>
                 </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isActuallyRealMarket ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Terminal VIP v12.1</span>
               </div>
             </div>
           </div>

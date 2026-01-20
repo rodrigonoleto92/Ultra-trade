@@ -11,8 +11,7 @@ export const FOREX_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/GBP', type: MarketType.FOREX },
   { symbol: 'EUR/JPY', type: MarketType.FOREX },
   { symbol: 'GBP/JPY', type: MarketType.FOREX },
-  { symbol: 'NZD/USD', type: MarketType.FOREX },
-];
+  ];
 
 export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/USD (OTC)', type: MarketType.OTC },
@@ -58,9 +57,12 @@ export const TIMEFRAMES = BINARY_TIMEFRAMES;
 // Configuração de verificação de licença externa
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
-// Senhas administrativas permanentes
-export const APP_PASSWORDS = [
-  'ruan_vitalicio', 
-  'teste_30',
-  'admin_1992'
+// Estrutura de chaves com nomes associados
+export const APP_USERS = [
+  { key: 'ruan_vitalicio', name: 'Ruan' },
+  { key: 'teste_30', name: 'Usuário Teste' },
+  { key: 'admin_1992', name: 'Rodrigo' }
 ];
+
+// Mantido para compatibilidade de validação legada
+export const APP_PASSWORDS = APP_USERS.map(u => u.key);
