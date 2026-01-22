@@ -10,6 +10,7 @@ export const FOREX_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/GBP', type: MarketType.FOREX },
   { symbol: 'EUR/JPY', type: MarketType.FOREX },
   { symbol: 'GBP/JPY', type: MarketType.FOREX },
+  { symbol: 'XAU/USD', type: MarketType.FOREX },
   ];
 
 export const OTC_PAIRS: CurrencyPair[] = [
