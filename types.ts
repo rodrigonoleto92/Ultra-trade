@@ -33,6 +33,7 @@ export interface Signal {
   type: SignalType;
   entryTime?: string;
   expirationTime?: string;
+  expirationTimestamp?: number;
   entryPrice?: string;
   stopLoss?: string;
   takeProfit?: string;
@@ -48,7 +49,6 @@ export interface CurrencyPair {
   type: MarketType;
 }
 
-// Added ChatMessage interface to fix the import error in components/GlobalChat.tsx
 export interface ChatMessage {
   id: string;
   userId: string;

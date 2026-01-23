@@ -1,500 +1,282 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ALL_PAIRS, BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS } from '../constants';
-import { Signal, Timeframe, SignalDirection, MarketType, SignalType } from '../types';
-import { generateSignal } from '../services/geminiService';
+import { BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS } from '../constants';
+import { Signal, Timeframe, SignalDirection, SignalType } from '../types';
+import { generateSignal, scanForBestSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
 interface DashboardProps {
   onLogout: () => void;
   userName?: string;
 }
 
-type AssetCategory = 'MOEDAS' | 'CRYPTO';
-
 const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader' }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
-  const [assetCategory, setAssetCategory] = useState<AssetCategory>('MOEDAS');
+  const [assetCategory, setAssetCategory] = useState<'MOEDAS' | 'CRYPTO'>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
-  const [selectedPairSymbol, setSelectedPairSymbol] = useState<string>('');
-  const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
-  const [pendingSignal, setPendingSignal] = useState<Signal | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
-  const [flashActive, setFlashActive] = useState(false);
-  const [currentScanningPair, setCurrentScanningPair] = useState<{symbol: string, type: string} | null>(null);
-  const [marketStatusMsg, setMarketStatusMsg] = useState<string | null>(null);
+  const [selectedPair, setSelectedPair] = useState('EUR/USD');
   
-  const lastTriggeredCandleRef = useRef<string>("");
+  const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
+  
+  const autoTriggeredRef = useRef<number | null>(null);
 
-  const isForexOpenTime = () => {
-    const day = currentTime.getDay(); 
-    const month = currentTime.getMonth() + 1;
-    const date = currentTime.getDate();
-    const isWeekend = day === 0 || day === 6;
-    const isHoliday = (month === 12 && date === 25) || (month === 1 && date === 1);
-    if (isWeekend || isHoliday) return false;
-    if (day === 5 && currentTime.getHours() >= 18) return false;
-    if (day === 0 && currentTime.getHours() < 18) return false;
-    return true;
+  const getMarketStatus = () => {
+    const now = new Date();
+    const day = now.getDay(); 
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    const timeValue = hour * 60 + minutes;
+
+    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'MERCADO REAL (CRIPTO)' };
+
+    if (signalType === SignalType.FOREX) {
+      const isWeekend = (day === 5 && timeValue >= 960) || (day === 6) || (day === 0 && timeValue < 1260);
+      return isWeekend ? { isOpen: false, label: 'MERCADO FECHADO (WEEKEND)' } : { isOpen: true, label: 'MERCADO REAL (FOREX)' };
+    }
+
+    const isOBOpen = timeValue >= 240 && timeValue <= 960;
+    return isOBOpen 
+      ? { isOpen: true, isOTC: false, label: 'MERCADO REAL (OB)' }
+      : { isOpen: true, isOTC: true, label: 'MERCADO EM OTC (OB)' };
   };
 
-  useEffect(() => {
-    if (signalType === SignalType.FOREX && assetCategory === 'MOEDAS' && !isForexOpenTime()) {
-      setMarketStatusMsg("MERCADO FECHADO: O mercado de Forex (Moedas) não opera aos finais de semana ou feriados bancários.");
-      setActiveSignal(null);
-      setPendingSignal(null);
-    } else {
-      if (marketStatusMsg?.includes("MERCADO FECHADO")) {
-        setMarketStatusMsg(null);
-      }
-    }
-  }, [signalType, assetCategory, currentTime]);
+  const marketStatus = getMarketStatus();
 
-  useEffect(() => {
-    const currentValidTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
-    const isValidTF = currentValidTimeframes.some(tf => tf.value === selectedTimeframe);
-    if (!isValidTF) {
-      setSelectedTimeframe(Timeframe.M1);
+  const currentPairsList = assetCategory === 'CRYPTO' 
+    ? CRYPTO_PAIRS 
+    : (signalType === SignalType.BINARY && (marketStatus as any).isOTC ? OTC_PAIRS : FOREX_PAIRS);
+
+  const triggerSignalGeneration = async () => {
+    if (isScanning || !marketStatus.isOpen) return;
+    setIsScanning(true);
+    setActiveSignal(null);
+
+    try {
+      if (signalType === SignalType.BINARY) {
+        const signal = await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY);
+        setActiveSignal(signal);
+      } else {
+        const isActuallyOTC = (marketStatus as any).isOTC;
+        const signal = await generateSignal(selectedPair, selectedTimeframe, isActuallyOTC, signalType);
+        setActiveSignal(signal);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsScanning(false);
     }
-    const availablePairs = getAvailablePairs();
-    if (availablePairs.length > 0 && (!selectedPairSymbol || !availablePairs.some(p => p.symbol === selectedPairSymbol))) {
-      setSelectedPairSymbol(availablePairs[0].symbol);
-    }
-  }, [signalType, assetCategory]);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      setCurrentTime(now);
       const seconds = now.getSeconds();
       const minutes = now.getMinutes();
+      
       let tfSeconds = 60;
-      if (selectedTimeframe === Timeframe.M1) tfSeconds = 60 - seconds;
-      else if (selectedTimeframe === Timeframe.M5) tfSeconds = (5 * 60) - ((minutes % 5) * 60 + seconds);
-      else if (selectedTimeframe === Timeframe.M15) tfSeconds = (15 * 60) - ((minutes % 15) * 60 + seconds);
-      setSecondsToNextCandle(tfSeconds);
-      if (tfSeconds >= 59 && signalType === SignalType.BINARY) {
-        setActiveSignal(null);
-        setPendingSignal(null);
-        if (marketStatusMsg && !marketStatusMsg.includes("MERCADO FECHADO")) {
-          setMarketStatusMsg(null);
-        }
+      let currentBoundary = 0;
+
+      if (selectedTimeframe === Timeframe.M1) {
+        tfSeconds = 60 - seconds;
+        currentBoundary = minutes;
+      } else if (selectedTimeframe === Timeframe.M5) {
+        tfSeconds = (5 * 60) - ((minutes % 5) * 60 + seconds);
+        currentBoundary = Math.floor(minutes / 5);
+      } else if (selectedTimeframe === Timeframe.M15) {
+        tfSeconds = (15 * 60) - ((minutes % 15) * 60 + seconds);
+        currentBoundary = Math.floor(minutes / 15);
       }
-      if (signalType === SignalType.BINARY) {
-        const triggerId = `${selectedTimeframe}-${assetCategory}-${signalType}-${now.getHours()}-${now.getMinutes()}`;
-        if (!isScanning && tfSeconds === 45) {
-          if (lastTriggeredCandleRef.current !== triggerId) {
-            lastTriggeredCandleRef.current = triggerId;
-            handleScanAndBuffer();
-          }
-        }
-        if (pendingSignal && tfSeconds === 30) {
-          setActiveSignal(pendingSignal);
-          setPendingSignal(null);
-          setFlashActive(true);
-          setTimeout(() => setFlashActive(false), 800);
-        }
+
+      setSecondsToNextCandle(tfSeconds);
+
+      if (signalType === SignalType.BINARY && tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
+        autoTriggeredRef.current = currentBoundary;
+        triggerSignalGeneration();
+      }
+
+      if (tfSeconds === 59 && activeSignal) {
+         setActiveSignal(null);
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, assetCategory, signalType, isScanning, currentTime, pendingSignal, marketStatusMsg]);
-
-  const getAvailablePairs = () => {
-    const forexIsOpen = isForexOpenTime();
-    if (assetCategory === 'CRYPTO') {
-      return CRYPTO_PAIRS;
-    } else {
-      if (signalType === SignalType.FOREX) {
-        return FOREX_PAIRS;
-      } else {
-        return forexIsOpen ? FOREX_PAIRS : OTC_PAIRS;
-      }
-    }
-  };
-
-  const handleScanAndBuffer = async (manualSymbol?: string) => {
-    if (signalType === SignalType.FOREX && assetCategory === 'MOEDAS' && !isForexOpenTime()) {
-      setMarketStatusMsg("MERCADO FECHADO: O mercado de Forex não opera aos finais de semana ou feriados bancários.");
-      return;
-    }
-    setIsScanning(true);
-    if (marketStatusMsg && !marketStatusMsg.includes("MERCADO FECHADO")) {
-      setMarketStatusMsg(null);
-    }
-    try {
-      const forexIsOpen = isForexOpenTime();
-      let winnerPair = '';
-      if (manualSymbol) {
-        winnerPair = manualSymbol;
-        setCurrentScanningPair({ symbol: manualSymbol, type: assetCategory });
-        await new Promise(r => setTimeout(r, 1200)); 
-      } else {
-        const availablePairs = getAvailablePairs();
-        const shuffledPairs = [...availablePairs].sort(() => 0.5 - Math.random());
-        for (let i = 0; i < Math.min(3, shuffledPairs.length); i++) {
-          setCurrentScanningPair({ symbol: shuffledPairs[i].symbol, type: shuffledPairs[i].type });
-          await new Promise(r => setTimeout(r, 450)); 
-        }
-        winnerPair = shuffledPairs[0]?.symbol || '';
-      }
-      if (winnerPair) {
-        const isActuallyOTC = signalType === SignalType.BINARY && !forexIsOpen && assetCategory === 'MOEDAS';
-        const newSignal = await generateSignal(winnerPair, selectedTimeframe, isActuallyOTC, signalType);
-        if (signalType === SignalType.BINARY) {
-          setPendingSignal(newSignal);
-        } else {
-          setActiveSignal(newSignal);
-        }
-      }
-    } catch (err) {
-      console.error("Erro no processamento:", err);
-    } finally {
-      setIsScanning(false);
-      setCurrentScanningPair(null);
-    }
-  };
-
-  const handleManualForexScan = () => {
-    if (isScanning) return;
-    setActiveSignal(null);
-    handleScanAndBuffer(selectedPairSymbol);
-  };
-
-  const formatTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const forexIsOpen = isForexOpenTime();
-  const isActuallyRealMarket = assetCategory === 'CRYPTO' || (assetCategory === 'MOEDAS' && forexIsOpen);
-  const currentMarketLabel = signalType === SignalType.FOREX
-    ? (assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsOpen ? 'MERCADO REAL (FOREX)' : 'MERCADO FECHADO'))
-    : (assetCategory === 'CRYPTO' ? 'MERCADO REAL (CRYPTO)' : (forexIsOpen ? 'MERCADO REAL ABERTO' : 'MERCADO EM OTC'));
-
-  const marketStatusColor = isActuallyRealMarket 
-    ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' 
-    : (assetCategory === 'MOEDAS' && !forexIsOpen && signalType === SignalType.FOREX 
-        ? 'text-rose-400 border-rose-500/30 bg-rose-500/5' 
-        : 'text-amber-400 border-amber-500/30 bg-amber-500/5');
-  
-  const currentTimeframes = signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES;
-  const currentAvailablePairs = getAvailablePairs();
+  }, [selectedTimeframe, signalType, marketStatus.isOpen, selectedPair, assetCategory, activeSignal]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] flex flex-col relative">
-      <header className="glass sticky top-0 z-50 border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Logo size="sm" />
-            <div className="hidden md:flex flex-col border-l border-white/10 pl-6">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Olá, <span className="logo-gradient-text">{userName}</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isActuallyRealMarket ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Terminal VIP v12.1</span>
-              </div>
+    <div className="min-h-screen bg-[#0a0a0c] flex flex-col text-white">
+      {/* Header com Saudação Visível em Mobile e Desktop */}
+      <header className="h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-50">
+        <div className="flex items-center gap-4 md:gap-8">
+          <Logo size="sm" hideText className="md:flex hidden" />
+          <Logo size="sm" className="md:hidden flex" hideText />
+          
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1.5 md:px-4 md:py-2 rounded-2xl">
+            <div className="flex flex-col">
+              <span className="text-[6px] md:text-[7px] font-black uppercase tracking-[0.2em] text-slate-500 leading-none mb-1">Próxima Vela</span>
+              <span className="text-sm md:text-xl font-mono font-black logo-gradient-text leading-none">{formatTime(secondsToNextCandle)}</span>
             </div>
+            <div className={`h-1.5 w-1.5 md:h-2 md:w-2 rounded-full ${secondsToNextCandle <= 5 ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'}`}></div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-4 sm:gap-8">
-            <div className="text-right hidden sm:block border-r border-white/10 pr-8">
-              <p className="text-xl font-mono font-bold text-white tracking-tighter">
-                {currentTime.toLocaleTimeString('pt-BR')}
-              </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Global Time</p>
-            </div>
-            <div className="text-right border-r border-white/10 pr-4 sm:pr-8">
-              <p className={`text-2xl font-mono font-black ${secondsToNextCandle <= 30 ? 'text-blue-500 animate-pulse' : 'logo-gradient-text'}`}>
-                {formatTime(secondsToNextCandle)}
-              </p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Vela Atual</p>
-            </div>
-            
-            <button 
-              onClick={onLogout}
-              className="group flex items-center gap-2 py-2 px-4 rounded-xl border border-white/5 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all duration-300"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500 group-hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-rose-500 hidden md:block">Sair</span>
-            </button>
+        <div className="flex items-center gap-3 md:gap-8">
+          <div className="flex flex-col items-end">
+            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Bem vindo,</span>
+            <span className="text-[10px] md:text-xs font-bold logo-gradient-text leading-tight uppercase">{userName}</span>
           </div>
+          <button onClick={onLogout} className="p-2 md:px-5 md:py-2.5 bg-white/5 hover:bg-rose-500/10 border border-white/10 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-all active:scale-95">
+            <span className="hidden md:inline">Sair</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside className="lg:col-span-1 space-y-6">
-          <div className={`p-5 rounded-2xl border ${marketStatusColor} transition-all duration-500`}>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-60">Status do Sistema</p>
-            <h3 className="text-lg font-black uppercase tracking-tighter">{currentMarketLabel}</h3>
-          </div>
+      <main className="flex-1 flex flex-col items-center p-4 md:p-6 space-y-8 max-w-5xl mx-auto w-full">
+        
+        <div className="w-full flex justify-center">
+           <div className={`px-6 md:px-10 py-3 rounded-full border shadow-lg backdrop-blur-sm flex items-center gap-3 ${marketStatus.isOpen ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-rose-500/20 text-rose-400 bg-rose-500/5'}`}>
+             <div className={`h-2 w-2 rounded-full animate-pulse ${marketStatus.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+             <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em]">{marketStatus.label}</span>
+           </div>
+        </div>
 
-          <div className="glass p-6 rounded-3xl border border-white/5 shadow-2xl">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Configurações</h2>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Operação</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => {
-                      setSignalType(SignalType.BINARY);
-                      setActiveSignal(null);
-                      setPendingSignal(null);
-                    }}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                      signalType === SignalType.BINARY
-                        ? 'logo-gradient-bg border-transparent text-slate-900 shadow-lg'
-                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    BINÁRIAS
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSignalType(SignalType.FOREX);
-                      setActiveSignal(null);
-                      setPendingSignal(null);
-                    }}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                      signalType === SignalType.FOREX
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 border-transparent text-white shadow-lg'
-                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    FOREX / CRIPTO
-                  </button>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+          
+          <div className="lg:col-span-5 space-y-6">
+            <div className="glass p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-white/5 shadow-2xl space-y-8">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-black uppercase tracking-[0.4em] text-slate-500">Painel de Comando</h3>
+                {signalType === SignalType.BINARY && (
+                  <span className="text-[8px] font-black text-blue-500 animate-pulse uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded">Varredura Ativa</span>
+                )}
               </div>
-
+              
               <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Ativos</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => {
-                      setAssetCategory('MOEDAS');
-                      setActiveSignal(null);
-                      setPendingSignal(null);
-                    }}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                      assetCategory === 'MOEDAS'
-                        ? 'bg-slate-800 border-white/20 text-white shadow-lg'
-                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    MOEDAS
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAssetCategory('CRYPTO');
-                      setActiveSignal(null);
-                      setPendingSignal(null);
-                    }}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                      assetCategory === 'CRYPTO'
-                        ? 'bg-orange-500/20 border-orange-500/40 text-orange-400 shadow-lg'
-                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    CRYPTO
-                  </button>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-4 tracking-widest">Categoria de Ativos</label>
+                <div className="flex gap-2 p-1.5 bg-black/40 rounded-2xl mb-4 border border-white/5">
+                  <button onClick={() => setAssetCategory('MOEDAS')} className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${assetCategory === 'MOEDAS' ? 'bg-white/10 text-white shadow-inner' : 'text-slate-600 hover:text-slate-400'}`}>MOEDAS</button>
+                  <button onClick={() => setAssetCategory('CRYPTO')} className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${assetCategory === 'CRYPTO' ? 'bg-white/10 text-white shadow-inner' : 'text-slate-600 hover:text-slate-400'}`}>CRYPTO</button>
                 </div>
-              </div>
 
-              {signalType === SignalType.FOREX && (
-                <div className="animate-in fade-in slide-in-from-left-4">
-                  <label className="block text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Escolher Ativo</label>
-                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
-                    {currentAvailablePairs.map(p => (
-                      <button
-                        key={p.symbol}
-                        onClick={() => {
-                            setSelectedPairSymbol(p.symbol);
-                            setActiveSignal(null);
-                        }}
-                        className={`py-2 px-1 rounded-lg text-[9px] font-bold transition-all border truncate ${
-                          selectedPairSymbol === p.symbol
-                            ? 'border-blue-500 bg-blue-500/20 text-blue-200'
-                            : 'bg-slate-900/60 border-slate-800 text-slate-500 hover:border-slate-600'
-                        }`}
-                      >
-                        {p.symbol}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Tempo Gráfico</label>
-                <div className={`grid ${currentTimeframes.length > 3 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
-                  {currentTimeframes.map(tf => (
-                    <button
-                      key={tf.value}
-                      onClick={() => {
-                        setSelectedTimeframe(tf.value);
-                        setActiveSignal(null);
-                        setPendingSignal(null);
-                      }}
-                      className={`py-3 rounded-xl text-[9px] font-black transition-all border ${
-                        selectedTimeframe === tf.value
-                          ? 'border-white/40 text-white bg-white/10 shadow-md'
-                          : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:border-slate-500'
-                      }`}
+                {signalType === SignalType.FOREX ? (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-3 tracking-widest">Escolha o Ativo</label>
+                    <select 
+                      value={selectedPair} 
+                      onChange={(e) => setSelectedPair(e.target.value)}
+                      className="w-full bg-slate-900/80 border border-white/10 rounded-2xl p-4 md:p-5 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none shadow-xl cursor-pointer"
                     >
-                      {tf.label}
-                    </button>
+                      {currentPairsList.map(p => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="p-5 md:p-6 bg-slate-900/50 rounded-2xl border border-white/5 text-center space-y-3 animate-in fade-in zoom-in duration-700">
+                    <div className="flex justify-center gap-1.5">
+                       {[1,2,3].map(i => <div key={i} className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce" style={{animationDelay: `${i*0.2}s`}}></div>)}
+                    </div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Varredura em tempo real ativada</p>
+                    <p className="text-[9px] text-slate-600 font-bold uppercase leading-relaxed">A IA selecionará o melhor ativo automaticamente.</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-4 tracking-widest">Estratégia e Tempo</label>
+                <div className="flex gap-2 p-1.5 bg-black/40 rounded-2xl mb-4 border border-white/5">
+                  <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950 shadow-lg' : 'text-slate-600'}`}>OPÇÕES (AUTO)</button>
+                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950 shadow-lg' : 'text-slate-600'}`}>FOREX (MANUAL)</button>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {(signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES).map(tf => (
+                    <button key={tf.value} onClick={() => setSelectedTimeframe(tf.value)} className={`py-3 md:py-4 rounded-2xl text-[10px] font-black border transition-all ${selectedTimeframe === tf.value ? 'bg-white text-slate-950 border-white shadow-white/10 shadow-lg' : 'bg-slate-900/50 text-slate-600 border-white/5 hover:border-white/20'}`}>{tf.label}</button>
                   ))}
                 </div>
               </div>
+
+              <div className="pt-6 border-t border-white/5 flex flex-col items-center">
+                 <div className="text-center mb-6 relative">
+                    <div className="absolute -inset-6 bg-blue-500/5 blur-[30px] rounded-full animate-pulse"></div>
+                    <p className="text-6xl md:text-6xl font-mono font-black logo-gradient-text tracking-tighter drop-shadow-[0_0_15px_rgba(96,165,250,0.3)] relative z-10">
+                      {formatTime(secondsToNextCandle)}
+                    </p>
+                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.4em] mt-3 relative z-10">
+                      Próxima Vela <span className="text-slate-700">(Sincronizada)</span>
+                    </p>
+                 </div>
+
+                 {signalType === SignalType.FOREX ? (
+                    <button 
+                      onClick={triggerSignalGeneration} 
+                      disabled={isScanning || !marketStatus.isOpen}
+                      className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-2xl ${
+                        !marketStatus.isOpen ? 'bg-slate-800 text-slate-600 opacity-50' :
+                        isScanning ? 'bg-slate-800 text-slate-600' : 
+                        'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20'
+                      }`}
+                    >
+                      {isScanning ? 'PROCESSANDO...' : 'GERAR SINAL FOREX'}
+                    </button>
+                 ) : (
+                    <div className="w-full text-center py-5 bg-slate-900/30 rounded-[24px] border border-white/5 backdrop-blur-sm">
+                       <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
+                         {isScanning ? 'IA ESCANEANDO...' : 'SINAL AUTOMÁTICO EM 30S'}
+                       </p>
+                    </div>
+                 )}
+              </div>
             </div>
           </div>
-        </aside>
 
-        <div className="lg:col-span-3 flex flex-col">
-          {signalType === SignalType.FOREX && (
-             <div className="mb-4 animate-in fade-in slide-in-from-top-4 flex items-center justify-center">
-                <button
-                  onClick={handleManualForexScan}
-                  disabled={isScanning || (assetCategory === 'MOEDAS' && !forexIsOpen)}
-                  className="w-full sm:w-auto px-10 py-4 rounded-2xl border border-blue-500/30 bg-blue-600 hover:bg-blue-500 transition-all flex items-center justify-center gap-3 group shadow-[0_0_20px_rgba(37,99,235,0.3)] disabled:opacity-50 disabled:grayscale"
-                >
-                  {isScanning ? (
-                    <>
-                      <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm font-black text-white uppercase tracking-widest">IA Escaneando {selectedPairSymbol}...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span className="text-sm font-black text-white uppercase tracking-widest">ANALISAR {selectedPairSymbol}</span>
-                    </>
-                  )}
-                </button>
-             </div>
-          )}
-
-          {!activeSignal ? (
-            <div className="glass rounded-[40px] h-[550px] flex flex-col items-center justify-center text-center p-12 border-dashed border-2 border-white/5 relative overflow-hidden">
-              {(isScanning || (pendingSignal && secondsToNextCandle > 30)) && <div className={`absolute inset-0 animate-pulse ${assetCategory === 'CRYPTO' ? 'bg-orange-500/10' : 'bg-blue-500/10'}`}></div>}
-              <div className="relative z-10 flex flex-col items-center w-full">
-                <div className={`mb-10 transition-all ${(isScanning || pendingSignal || marketStatusMsg) ? 'scale-110' : 'opacity-20'}`}>
-                  {marketStatusMsg ? (
-                    <div className="h-32 w-32 rounded-full border-2 border-amber-500 flex items-center justify-center bg-amber-500/10 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-14 w-14 ${marketStatusMsg.includes("MERCADO FECHADO") ? 'text-rose-500' : 'text-amber-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                    </div>
-                  ) : (isScanning || (pendingSignal && secondsToNextCandle > 30)) ? (
-                    <div className="relative h-32 w-32 flex items-center justify-center mx-auto">
-                      <div className="absolute inset-0 border-4 rounded-full border-white/5"></div>
-                      <div className={`absolute inset-0 border-4 rounded-full animate-spin ${signalType === SignalType.BINARY ? 'border-t-emerald-500' : 'border-t-blue-500'}`}></div>
-                      <div className="flex flex-col items-center text-center px-4">
-                        <span className={`text-[10px] font-black mb-1 ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`}>{currentScanningPair?.symbol || 'IA FLOW'}</span>
-                        <span className="text-[8px] text-slate-500 font-bold uppercase">ANALISANDO...</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="h-32 w-32 rounded-full border-2 border-slate-800 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                  )}
+          <div className="lg:col-span-7 flex flex-col min-h-[400px] md:min-h-[500px]">
+            {isScanning ? (
+              <div className="flex-1 glass rounded-[32px] md:rounded-[40px] flex flex-col items-center justify-center p-8 md:p-12 text-center border border-blue-500/20 animate-in fade-in zoom-in">
+                <div className="h-12 w-12 md:h-16 md:w-16 mb-6 md:mb-8 relative">
+                   <div className="absolute inset-0 border-2 border-blue-500/20 rounded-full animate-ping"></div>
+                   <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                
-                <div className="max-w-md w-full">
-                  <h3 className="text-3xl font-black text-white mb-6 tracking-tighter uppercase">
-                    {marketStatusMsg && marketStatusMsg.includes("MERCADO FECHADO")
-                        ? 'MERCADO FECHADO' 
-                        : (isScanning || (pendingSignal && secondsToNextCandle > 30)) 
-                            ? `IA PROCESSANDO DADOS` 
-                            : (signalType === SignalType.FOREX ? 'FOREX: AGUARDANDO COMANDO' : 'BINÁRIAS: AGUARDANDO GATILHO')
-                    }
-                  </h3>
-                  
-                  <div className={`p-6 rounded-3xl border mb-8 transition-all duration-700 ${marketStatusMsg ? (marketStatusMsg.includes("MERCADO FECHADO") ? 'bg-rose-500/10 border-rose-500/20' : 'bg-amber-500/10 border-amber-500/20') : 'bg-slate-900/40 border-white/5'}`}>
-                    <p className={`text-sm font-medium leading-relaxed ${marketStatusMsg ? (marketStatusMsg.includes("MERCADO FECHADO") ? 'text-rose-200' : 'text-amber-200') : 'text-slate-300'}`}>
-                      {marketStatusMsg || (signalType === SignalType.FOREX 
-                        ? `Selecione o ativo ${selectedPairSymbol} ou outro da lista e clique em Analisar acima.`
-                        : (secondsToNextCandle > 45 
-                          ? 'Monitorando padrões estruturais Sniper. Sinais liberados nos últimos 15s de cada vela.'
-                          : pendingSignal 
-                            ? `OPORTUNIDADE DETECTADA! Confirmando em ${secondsToNextCandle - 30}s...`
-                            : 'Buscando zonas de liquidez para opções binárias.'))
-                      }
-                    </p>
-                  </div>
+                <h4 className="text-lg md:text-xl font-black uppercase tracking-tighter mb-2">Monitoramento Hunter</h4>
+                <p className="text-slate-500 text-[10px] md:text-xs max-w-xs leading-relaxed font-bold">
+                  {signalType === SignalType.BINARY 
+                    ? `Varredura em ${currentPairsList.length} ativos...` 
+                    : `Analisando ${selectedPair}...`}
+                </p>
+              </div>
+            ) : activeSignal ? (
+              <div className="animate-in fade-in zoom-in duration-700">
+                <SignalCard signal={activeSignal} />
+                <div className="mt-6 p-6 md:p-8 glass rounded-[24px] md:rounded-[32px] text-center border border-emerald-500/20 bg-emerald-500/5 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent"></div>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-3">Ponto Exato de Entrada</p>
+                  <p className="text-emerald-400 text-4xl md:text-5xl font-black drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]">{activeSignal.entryTime}</p>
+                  <p className="text-[9px] text-slate-600 font-black uppercase tracking-[0.4em] mt-5 group-hover:text-emerald-500 transition-colors">Ultra Sniper v12.1 Cloud</p>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className={`max-w-2xl mx-auto w-full transition-all duration-500 ${flashActive ? (activeSignal.direction === SignalDirection.CALL ? 'animate-flash-call' : 'animate-flash-put') : 'animate-in fade-in slide-in-from-bottom-6'}`}>
-              <div className="mb-8 flex flex-col items-center gap-4 text-center">
-                <div className={`flex items-center gap-3 py-2.5 px-8 border rounded-full ${signalType === SignalType.BINARY ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
-                  <span className={`animate-ping h-2.5 w-2.5 rounded-full ${signalType === SignalType.BINARY ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
-                  <span className={`text-sm font-black uppercase tracking-widest ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`}>
-                    Análise Sniper Confirmada
-                  </span>
+            ) : (
+              <div className="flex-1 border-2 border-dashed border-white/5 rounded-[32px] md:rounded-[40px] flex flex-col items-center justify-center p-8 md:p-12 text-center opacity-40">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-900 rounded-full flex items-center justify-center mb-6 md:mb-8 border border-white/5">
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 md:h-8 md:w-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                   </svg>
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Protocolo de Entrada</h2>
+                <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px]">Aguardando disparo da IA</p>
               </div>
-
-              <SignalCard signal={activeSignal} />
-              
-              <div className="mt-8 p-10 glass rounded-[40px] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden">
-                {signalType === SignalType.BINARY && (
-                  <div className="absolute top-0 right-0 p-6 pointer-events-none">
-                    <span className={`text-6xl font-black tabular-nums transition-colors ${secondsToNextCandle <= 10 ? 'text-rose-500' : 'text-blue-500/20'}`}>{secondsToNextCandle}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-5 mb-8">
-                  <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-lg ${signalType === SignalType.BINARY ? 'border-emerald-500/30 bg-emerald-500/20' : 'border-blue-500/30 bg-blue-500/20'}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 ${signalType === SignalType.BINARY ? 'text-emerald-400' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-white uppercase tracking-widest leading-none mb-1">Estratégia Sniper</h4>
-                    <p className={`text-xs font-bold uppercase tracking-wider ${signalType === SignalType.BINARY ? 'text-emerald-400/80' : 'text-blue-400/80'}`}>Análise baseada em {activeSignal.timeframe}</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex gap-5 text-sm text-slate-300 items-center bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <span className={`h-8 w-8 rounded-full text-slate-900 flex items-center justify-center font-black flex-shrink-0 shadow-md ${signalType === SignalType.BINARY ? 'bg-emerald-500' : 'bg-blue-500'}`}>1</span>
-                    <p>Ative o par <span className="text-white font-bold">{activeSignal.pair}</span> na corretora.</p>
-                  </div>
-                  <div className={`flex gap-5 text-sm text-slate-200 items-center p-5 rounded-2xl border shadow-xl ${signalType === SignalType.BINARY ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-blue-500/20 border-blue-500/40'}`}>
-                    <span className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-black flex-shrink-0 animate-bounce shadow-md">2</span>
-                    <p className="font-bold uppercase text-[11px]">
-                      {activeSignal.type === SignalType.FOREX 
-                        ? `Entre como ${activeSignal.direction === 'CALL' ? 'BUY' : 'SELL'} e posicione os alvos de topo/fundo.` 
-                        : `Clique em ${activeSignal.direction === 'CALL' ? 'COMPRAR' : 'VENDER'} no início da vela.`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
 
-      <footer className="glass border-t border-white/5 py-6 px-6 text-center">
-        <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.5em]">
-          ULTRA TRADE VIP © 2026 | TERMINAL SNIPER v12.1
-        </p>
+      <footer className="py-8 text-center border-t border-white/5 mt-12 bg-black/40">
+        <p className="text-[9px] font-black uppercase tracking-[1em] text-slate-700">Ultra Sniper Terminal v12.1</p>
       </footer>
     </div>
   );

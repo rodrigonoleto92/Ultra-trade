@@ -69,15 +69,12 @@ const App: React.FC = () => {
   }, []);
 
   const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
-    // Busca na lista de usuários fixos
     const user = APP_USERS.find(u => u.key === pass);
     if (user) return { isValid: true, name: user.name };
 
-    // Busca na lista remota (formato chave)
     const remoteList = await fetchRemotePasswords();
     if (remoteList.includes(pass)) return { isValid: true, name: 'Trader VIP' };
 
-    // Busca no registro local
     const localUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
     if (localUsers.includes(pass)) return { isValid: true, name: 'Trader Registrado' };
 
@@ -93,7 +90,7 @@ const App: React.FC = () => {
         handleLogout();
         alert("Sessão expirada ou acesso revogado.");
       }
-      setIsVerifying(false);
+      setTimeout(() => setIsVerifying(false), 3000);
     };
     const timer = setInterval(checkAccess, 5 * 60 * 1000);
     return () => clearInterval(timer);
@@ -112,20 +109,30 @@ const App: React.FC = () => {
     } else {
       throw new Error("Acesso negado");
     }
-    setIsVerifying(false);
+    setTimeout(() => setIsVerifying(false), 2000);
   };
 
   if (isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        {isVerifying && (
-          <div className="fixed top-24 right-4 z-50">
-            <div className="bg-blue-500/10 backdrop-blur-md border border-blue-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-              <div className="h-1.5 w-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-              <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Sincronizando Licença...</span>
-            </div>
+        {/* Indicador de Sincronização Redimensionado (Menor e mais elegante) */}
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-all duration-700 pointer-events-none">
+          <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border backdrop-blur-xl shadow-xl transition-all duration-1000 ${
+            isVerifying 
+            ? 'bg-blue-600/10 border-blue-400/30 opacity-100 translate-y-0 scale-100' 
+            : 'bg-emerald-600/5 border-emerald-400/10 opacity-50 -translate-y-1 scale-90'
+          }`}>
+            <div className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_currentColor] ${
+              isVerifying ? 'bg-blue-400 animate-ping' : 'bg-emerald-400 animate-pulse'
+            }`}></div>
+            <span className={`text-[8px] font-black uppercase tracking-[0.15em] ${
+              isVerifying ? 'text-blue-400' : 'text-emerald-400'
+            }`}>
+              {isVerifying ? 'Sincronizando Licença...' : 'Licença Ativa'}
+            </span>
           </div>
-        )}
+        </div>
+        
         <Dashboard onLogout={handleLogout} userName={userName} />
       </div>
     );
