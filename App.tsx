@@ -115,17 +115,17 @@ const App: React.FC = () => {
   if (isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        {/* Indicador de Sincronização Redimensionado (Menor e mais elegante) */}
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-all duration-700 pointer-events-none">
-          <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border backdrop-blur-xl shadow-xl transition-all duration-1000 ${
+        {/* Indicador de Sincronização Redimensionado (Mais visível e destacado) */}
+        <div className="fixed top-2 md:top-4 left-1/2 -translate-x-1/2 z-[100] transition-all duration-700 pointer-events-none">
+          <div className={`flex items-center gap-3 px-6 py-2.5 rounded-full border backdrop-blur-2xl shadow-2xl transition-all duration-1000 ${
             isVerifying 
-            ? 'bg-blue-600/10 border-blue-400/30 opacity-100 translate-y-0 scale-100' 
-            : 'bg-emerald-600/5 border-emerald-400/10 opacity-50 -translate-y-1 scale-90'
+            ? 'bg-blue-600/20 border-blue-400/50 opacity-100 translate-y-0 scale-100' 
+            : 'bg-emerald-600/10 border-emerald-400/20 opacity-80 translate-y-0 scale-95'
           }`}>
-            <div className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_currentColor] ${
+            <div className={`h-2.5 w-2.5 rounded-full shadow-[0_0_12px_currentColor] ${
               isVerifying ? 'bg-blue-400 animate-ping' : 'bg-emerald-400 animate-pulse'
             }`}></div>
-            <span className={`text-[8px] font-black uppercase tracking-[0.15em] ${
+            <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.25em] ${
               isVerifying ? 'text-blue-400' : 'text-emerald-400'
             }`}>
               {isVerifying ? 'Sincronizando Licença...' : 'Licença Ativa'}
