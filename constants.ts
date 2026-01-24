@@ -62,8 +62,8 @@ export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
   { key: 'teste_30', name: 'Usuário Teste' },
   { key: 'admin_1992', name: 'Rodrigo' },
-  
-];
+  { key: 'duda2102', name: 'WALLACE' },
+  ];
 
 // Mantido para compatibilidade de validação legada
 export const APP_PASSWORDS = APP_USERS.map(u => u.key);
