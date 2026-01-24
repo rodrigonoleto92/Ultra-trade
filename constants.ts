@@ -52,6 +52,7 @@ export const FOREX_TIMEFRAMES = [
 ];
 
 // Fallback para compatibilidade
+// wallace valid: 24/01/2027
 export const TIMEFRAMES = BINARY_TIMEFRAMES;
 
 // Configuração de verificação de licença externa
