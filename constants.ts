@@ -62,7 +62,7 @@ export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
   { key: 'teste_30', name: 'Usuário Teste' },
   { key: 'admin_1992', name: 'Rodrigo' },
-  { key: 'Duda2102' , name: 'WALLACE' },
+  { key: 'duda2102' , name: 'WALLACE' },
 ];
 
 // Mantido para compatibilidade de validação legada
