@@ -61,7 +61,7 @@ export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuar
 // Estrutura de chaves com nomes associados
 export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
-  { key: 'teste_30', name: 'Usuário Teste' },
+  { key: 'teste_2020', name: 'Usuário Teste' },
   { key: 'admin_1992', name: 'Rodrigo' },
   { key: 'duda2102', name: 'WALLACE' },
   ];
