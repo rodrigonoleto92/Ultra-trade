@@ -41,24 +41,23 @@ export async function scanForBestSignal(
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `ALGORITMO SNIPER V15 - LEITURA VISUAL DE PRICE ACTION:
+    const prompt = `ALGORITMO SNIPER V17 - LEITURA PURA DE PRICE ACTION:
                     Analise ${selectedPair} em ${timeframe}. 
                     
-                    FILTRO INVISÍVEL (NÃO CITAR):
-                    Use a Média de 20 para definir a tendência. 
-                    - Se o preço estiver ABAIXO da média: Só aceite sinais de PUT (Venda).
-                    - Se o preço estiver ACIMA da média: Só aceite sinais de CALL (Compra).
-                    
-                    ESTILO DE DESCRIÇÃO (MANDATÓRIO):
-                    - Proibido usar: "Média", "MA20", "20", "Indicador", "Período", "Móvel".
-                    - Use apenas termos de cenário: "Rompimento de Canal", "Rejeição de Preço", "Pivot de Alta/Baixa", "Exaustão de Vendedores", "Força Compradora Dominante", "Falso Rompimento".
-                    - A descrição deve explicar O PORQUÊ da entrada baseada no cenário gráfico.
+                    FILTRO RÍGIDO DE FLUXO (INVISÍVEL):
+                    - Use a tendência macro para validar a direção. 
+                    - Se o preço estiver em queda livre, procure apenas Vendas (PUT).
+                    - Se o preço estiver em subida constante, procure apenas Compras (CALL).
+
+                    PROIBIÇÃO DE TERMINOLOGIA:
+                    - É ESTRITAMENTE PROIBIDO usar: "Média", "Móvel", "Indicador", "MA20", "20", "Período", "EMA", "SMA", "Cruzamento".
+                    - Use APENAS termos de cenário: "Rompimento de Canal", "Rejeição de Topo/Fundo", "Pivot de Alta/Baixa", "Exaustão de Vendedores", "Força Compradora", "Falso Rompimento", "Pullback em Zona Estrutural".
 
                     RESPOSTA JSON:
                     {
                       "direction": "CALL"|"PUT",
-                      "confidence": 95-99,
-                      "analysis": "Cenário de Price Action (Ex: Rompimento de canal com forte rejeição de topo) - Máx 12 palavras"
+                      "confidence": 94-99,
+                      "analysis": "Explicação visual do cenário Price Action (Ex: Rompimento de canal descendente com forte rejeição de preço) - Máx 12 palavras"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -93,7 +92,7 @@ export async function scanForBestSignal(
       confidence: data.confidence || 97,
       buyerPercentage: bPct,
       sellerPercentage: 100 - bPct,
-      strategy: data.analysis || 'Rompimento de canal identificado com forte fluxo de continuidade.',
+      strategy: data.analysis || 'Rompimento de estrutura identificado com fluxo de continuidade.',
       timestamp: Date.now()
     };
   } catch (error) {
@@ -109,7 +108,7 @@ export async function scanForBestSignal(
       confidence: 88, 
       buyerPercentage: 25, 
       sellerPercentage: 75,
-      strategy: 'Rejeição de preço em zona de oferta com fluxo vendedor.', 
+      strategy: 'Rejeição de preço em zona de oferta com fluxo vendedor dominante.', 
       timestamp: Date.now()
     };
   }
@@ -126,14 +125,13 @@ export async function generateSignal(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Analise ${pair} em ${timeframe}. 
-                    Filtre pela MA20 internamente (Tendência).
-                    DESCRIÇÃO: Use termos de Price Action como "Canais", "Rompimentos", "Rejeição". 
-                    NUNCA escreva nomes de indicadores.
-                    JSON:
+                    NÃO mencione indicadores ou médias. FOCO EM PRICE ACTION PURO.
+                    Use: Canais, Rompimentos, Rejeição, Padrões de Vela e Estrutura de Mercado.
+                    Responda em JSON:
                     {
                       "direction": "CALL"|"PUT",
                       "confidence": 93-99,
-                      "analysis": "Descreva o cenário gráfico apenas"
+                      "analysis": "Descrição técnica visual do cenário gráfico"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -168,7 +166,7 @@ export async function generateSignal(
       confidence: data.confidence || 96,
       buyerPercentage: bPct,
       sellerPercentage: 100 - bPct,
-      strategy: data.analysis || 'Fluxo de rompimento confirmado pela ação do preço.',
+      strategy: data.analysis || 'Confirmação técnica de rompimento e continuidade de fluxo.',
       timestamp: Date.now()
     };
   } catch (error) {
@@ -176,7 +174,7 @@ export async function generateSignal(
       id: generateVIPId(type),
       pair, type, direction: SignalDirection.PUT, timeframe,
       entryTime: "AGORA", confidence: 85, buyerPercentage: 15, sellerPercentage: 85,
-      strategy: 'Padrão de rejeição em zona de resistência estrutural.', timestamp: Date.now()
+      strategy: 'Padrão de rejeição identificado em zona estrutural de preço.', timestamp: Date.now()
     };
   }
 }

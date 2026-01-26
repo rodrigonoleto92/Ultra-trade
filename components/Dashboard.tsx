@@ -33,31 +33,34 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const isAdmin = authPassword === 'admin_1992';
   const autoTriggeredRef = useRef<number | null>(null);
 
-  // Status do mercado memoizado para estabilidade
+  // Status do mercado sincronizado com as regras de OTC solicitadas
   const marketStatus = useMemo(() => {
     const now = new Date();
-    const day = now.getDay(); 
+    const day = now.getDay(); // 0 (Dom) a 6 (Sab)
     const hour = now.getHours();
     const minutes = now.getMinutes();
     const timeValue = hour * 60 + minutes;
 
     if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO)', isOTC: false };
     
+    // Regra Forex: Aberto de Dom 18h até Sex 17h (aprox)
     if (signalType === SignalType.FOREX) {
       const isWeekend = (day === 6) || (day === 0) || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
-      return isWeekend ? { isOpen: false, label: 'FECHADO', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
+      return isWeekend ? { isOpen: false, label: 'MERCADO FECHADO', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
     }
 
+    // REGRA SOLICITADA OB: 
+    // Mercado Real: Seg-Sex das 04:00 (240 min) às 16:00 (960 min)
+    // OTC: Meio de semana das 16:01 às 03:59 e Finais de Semana Inteiros
     const isOBWeekend = (day === 6 || day === 0);
-    const isWeekdayOpenHours = !isOBWeekend && timeValue >= 240 && timeValue <= 1080;
+    const isWeekdayRealTime = !isOBWeekend && timeValue >= 240 && timeValue <= 960;
     
     if (isOBWeekend) return { isOpen: true, isOTC: true, label: 'OTC (FINAL DE SEMANA)' };
-    return isWeekdayOpenHours 
-      ? { isOpen: true, isOTC: false, label: 'MERCADO REAL' }
+    return isWeekdayRealTime 
+      ? { isOpen: true, isOTC: false, label: 'MERCADO REAL (ABERTO)' }
       : { isOpen: true, isOTC: true, label: 'MERCADO EM OTC' };
   }, [assetCategory, signalType, Math.floor(Date.now() / 60000)]);
 
-  // Lista de ativos memoizada para evitar re-renderizações do sinal
   const currentPairsList = useMemo(() => {
     let baseList = assetCategory === 'CRYPTO' 
       ? CRYPTO_PAIRS 
@@ -76,17 +79,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     }
   }, [currentPairsList]);
 
-  // Limpeza de estado ao trocar de categoria
-  useEffect(() => {
-    setActiveSignal(null);
-    autoTriggeredRef.current = null;
-  }, [assetCategory, signalType, selectedTimeframe]);
-
   const triggerSignalGeneration = async () => {
     if (isScanning || !marketStatus.isOpen) return;
     setIsScanning(true);
     
-    const texts = ['VARRENDO MERCADO...', 'IDENTIFICANDO PADRÕES...', 'VALIDANDO ENTRADA...', 'SINCRONIZANDO IA...'];
+    const texts = ['MAPEANDO ESTRUTURA...', 'LOCALIZANDO CANAIS...', 'ANALISANDO REJEIÇÕES...', 'SINCRONIZANDO SNIPER...'];
     for (const text of texts) {
       setScanningText(text);
       await new Promise(r => setTimeout(r, 600));
@@ -129,14 +126,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       setSecondsToNextCandle(tfSeconds);
       
       if (signalType === SignalType.BINARY) {
-        // GERAÇÃO: Aparece aos 30 segundos restantes para a próxima vela
         if (tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
           autoTriggeredRef.current = currentBoundary;
           triggerSignalGeneration();
         }
         
-        // LIMPEZA: Desaparece 10 segundos antes do novo sinal (ou seja, aos 40 segundos do cronômetro)
-        // Se tfSeconds é 40, faltam 10 segundos para chegar em 30 (onde gera o novo sinal)
         if (tfSeconds === 40 && activeSignal && !isScanning) {
           setActiveSignal(null);
         }
@@ -151,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         <div className="flex items-center gap-3">
           <Logo size="sm" hideText />
           <div className="flex flex-col">
-            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Painel,</span>
+            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Terminal,</span>
             <span className="text-[10px] md:text-xs font-bold logo-gradient-text leading-tight uppercase">{userName}</span>
           </div>
         </div>
@@ -167,13 +161,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
           </div>
           
           <div className="flex gap-2">
-            {isAdmin && (
-              <button onClick={() => setShowAdminPanel(!showAdminPanel)} className={`p-3 border rounded-2xl transition-all ${showAdminPanel ? 'bg-amber-500 border-amber-400 text-slate-900' : 'bg-white/5 border-white/10 text-slate-400'}`}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </button>
-            )}
             <button onClick={onLogout} className="p-3 bg-white/5 border border-white/10 rounded-2xl">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -194,7 +181,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 w-full">
           <div className="lg:col-span-5 space-y-4">
             <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-5">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Configuração</h3>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Configuração Sniper</h3>
               
               <div className="space-y-4">
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -230,12 +217,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                   disabled={isScanning || !marketStatus.isOpen}
                   className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isScanning ? scanningText : 'GERAR SINAL'}
+                  {isScanning ? scanningText : 'GERAR ANÁLISE SNIPER'}
                 </button>
               ) : (
                 <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-white/5">
                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `PRÓXIMO CICLO EM ${formatTime(secondsToNextCandle)}`}
+                     {isScanning ? scanningText : `PRÓXIMO CICLO AUTOMÁTICO EM ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
@@ -250,7 +237,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h4 className="text-sm font-black uppercase tracking-widest">{scanningText}</h4>
-                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest">IA Sniper Cloud Connection</p>
+                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest">Calculando Probabilidades via Price Action</p>
               </div>
             ) : activeSignal ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -261,7 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Leitura de Mercado</p>
+                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Sincronização de Fluxo</p>
               </div>
             )}
           </div>
@@ -269,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       </main>
 
       <footer className="py-4 text-center border-t border-white/5 mt-auto bg-black/20">
-        <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">Ultra Sniper {SECURITY_VERSION} Terminal</p>
+        <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">Ultra Sniper {SECURITY_VERSION} Global Terminal</p>
       </footer>
     </div>
   );
