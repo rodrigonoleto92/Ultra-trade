@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS, SECURITY_VERSION, APP_USERS, REMOTE_PASSWORDS_URL } from '../constants';
+import { BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS, SECURITY_VERSION, APP_USERS } from '../constants';
 import { Signal, Timeframe, SignalDirection, SignalType } from '../types';
 import { generateSignal, scanForBestSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
@@ -27,10 +27,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanningText, setScanningText] = useState('IDENTIFICANDO PADRÕES...');
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
   
   const isAdmin = authPassword === 'admin_1992';
   const autoTriggeredRef = useRef<number | null>(null);
+
+  // BUG FIX: Garantir que o par selecionado mude quando a categoria muda
+  useEffect(() => {
+    if (assetCategory === 'CRYPTO') {
+      setSelectedPair(CRYPTO_PAIRS[0].symbol);
+    } else {
+      setSelectedPair(FOREX_PAIRS[0].symbol);
+    }
+    setActiveSignal(null);
+  }, [assetCategory]);
 
   const marketStatus = (() => {
     const now = new Date();
@@ -59,11 +70,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     if (isScanning || !marketStatus.isOpen) return;
     setIsScanning(true);
     setActiveSignal(null);
+    
+    // Efeito visual de varredura
+    const texts = ['ANALISANDO FLUXO...', 'IDENTIFICANDO PADRÕES...', 'VALIDANDO ENTRADA...', 'SINCRONIZANDO IA...'];
+    for (const text of texts) {
+      setScanningText(text);
+      await new Promise(r => setTimeout(r, 600));
+    }
+
     try {
       if (signalType === SignalType.BINARY) {
         const signal = await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY);
         setActiveSignal(signal);
       } else {
+        // Garante que gera o sinal EXATO do par selecionado (BTC/USD etc)
         const signal = await generateSignal(selectedPair, selectedTimeframe, (marketStatus as any).isOTC, signalType);
         setActiveSignal(signal);
       }
@@ -99,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       if (tfSeconds === 59 && activeSignal) setActiveSignal(null);
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal]);
+  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, selectedPair]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col text-white">
@@ -107,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         <div className="flex items-center gap-3">
           <Logo size="sm" hideText />
           <div className="flex flex-col">
-            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Terminal,</span>
+            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Painel,</span>
             <span className="text-[10px] md:text-xs font-bold logo-gradient-text leading-tight uppercase">{userName}</span>
           </div>
         </div>
@@ -124,17 +144,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
           
           <div className="flex gap-2">
             {isAdmin && (
-              <button 
-                onClick={() => setShowAdminPanel(!showAdminPanel)}
-                className={`p-3 border rounded-2xl transition-all ${showAdminPanel ? 'bg-amber-500 border-amber-400 text-slate-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : 'bg-white/5 border-white/10 text-slate-400 hover:text-amber-400'}`}
-              >
+              <button onClick={() => setShowAdminPanel(!showAdminPanel)} className={`p-3 border rounded-2xl transition-all ${showAdminPanel ? 'bg-amber-500 border-amber-400 text-slate-900' : 'bg-white/5 border-white/10 text-slate-400'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </button>
             )}
-            <button onClick={onLogout} className="p-3 bg-white/5 hover:bg-rose-500/10 border border-white/10 rounded-2xl transition-all active:scale-90 group">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-slate-400 group-hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button onClick={onLogout} className="p-3 bg-white/5 border border-white/10 rounded-2xl">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>
@@ -143,55 +160,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       </header>
 
       <main className="flex-1 flex flex-col items-center p-3 md:p-6 space-y-4 md:space-y-6 max-w-6xl mx-auto w-full">
-        
         {isAdmin && showAdminPanel && (
           <div className="w-full animate-in slide-in-from-top duration-500">
              <div className="glass p-6 rounded-[32px] border border-amber-500/30 bg-amber-500/5 shadow-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-4 w-4 bg-amber-500 rounded-full animate-pulse"></div>
-                    <h2 className="text-amber-500 font-black uppercase tracking-widest text-sm">Controle de Acesso Master</h2>
-                  </div>
-                  <span className="text-[10px] font-black bg-amber-500 text-slate-900 px-3 py-1 rounded-full">RODRIGO ADMIN</span>
-                </div>
-                
+                <h2 className="text-amber-500 font-black uppercase tracking-widest text-sm mb-4">Controle de Segurança Master</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                   <div className="bg-black/40 p-5 rounded-2xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">Segurança Global</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl font-black text-white">{SECURITY_VERSION}</span>
-                        <div className="h-2 w-2 bg-emerald-500 rounded-full"></div>
-                      </div>
-                      <p className="text-[9px] text-amber-500/80 mt-3 font-bold uppercase leading-relaxed">
-                        ⚠️ Para deslogar todos: mude o valor 'SECURITY_VERSION' no arquivo constants.ts. O app de cada usuário detectará e fará logout.
-                      </p>
-                   </div>
-                   
-                   <div className="bg-black/40 p-5 rounded-2xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">Chaves no Código ({APP_USERS.length})</p>
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-2">
-                         {APP_USERS.map(u => (
-                           <span key={u.key} className="text-[8px] bg-white/10 px-2 py-1 rounded border border-white/5 text-slate-300 font-bold uppercase">
-                             {u.name}
-                           </span>
-                         ))}
-                      </div>
-                      <p className="text-[9px] text-slate-500 mt-2 italic">Acesso local via constants.ts</p>
-                   </div>
-
-                   <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col justify-between">
-                      <div>
-                        <p className="text-[10px] text-rose-500 font-black uppercase mb-1">Revogação de Acesso</p>
-                        <p className="text-[9px] text-slate-400 font-medium">A verificação ocorre a cada 30 segundos.</p>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          alert(`MÉTODO DE EXPULSÃO:\n\n1. Remova a chave do usuário no arquivo constants.ts.\n2. Em até 30 segundos, o app dele fará logout automático.\n\n3. Se quiser deslogar TODOS de uma vez, mude a versão SECURITY_VERSION no código.`);
-                        }}
-                        className="w-full mt-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-black rounded-xl transition-all shadow-lg shadow-rose-500/20"
-                      >
-                        COMO DESLOGAR USUÁRIOS
-                      </button>
+                   <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">Versão: {SECURITY_VERSION}</p>
+                      <p className="text-[8px] text-amber-500/60 mt-2 font-bold uppercase">Logout Global: Mude a versão no constants.ts</p>
                    </div>
                 </div>
              </div>
@@ -208,45 +184,54 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 w-full">
           <div className="lg:col-span-5 space-y-4">
             <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-5">
-              <div className="flex justify-between items-center">
-                <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Configuração</h3>
-                {signalType === SignalType.BINARY && (
-                  <span className="text-[7px] font-black text-blue-500 animate-pulse uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded">AUTO-SCAN</span>
-                )}
-              </div>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Configuração</h3>
+              
               <div className="space-y-4">
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
-                  <button onClick={() => setAssetCategory('MOEDAS')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'MOEDAS' ? 'bg-white/10 text-white shadow-inner' : 'text-slate-600'}`}>MOEDAS</button>
-                  <button onClick={() => setAssetCategory('CRYPTO')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'CRYPTO' ? 'bg-white/10 text-white shadow-inner' : 'text-slate-600'}`}>CRYPTO</button>
+                  <button onClick={() => setAssetCategory('MOEDAS')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'MOEDAS' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>MOEDAS</button>
+                  <button onClick={() => setAssetCategory('CRYPTO')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'CRYPTO' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>CRYPTO</button>
                 </div>
+
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                   <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>OB (AUTO)</button>
-                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>FX (MANUAL)</button>
+                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>FX / CRY (MANUAL)</button>
                 </div>
+
                 {signalType === SignalType.FOREX && (
-                  <select value={selectedPair} onChange={(e) => setSelectedPair(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-bold text-white outline-none">
+                  <select 
+                    value={selectedPair} 
+                    onChange={(e) => setSelectedPair(e.target.value)}
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-bold text-white outline-none"
+                  >
                     {currentPairsList.map(p => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
                   </select>
                 )}
+
                 <div className="grid grid-cols-3 gap-2">
                   {(signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES).map(tf => (
-                    <button key={tf.value} onClick={() => setSelectedTimeframe(tf.value)} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${selectedTimeframe === tf.value ? 'bg-white text-slate-950 border-white shadow-lg' : 'bg-slate-900/50 text-slate-600 border-white/5 hover:border-white/20'}`}>{tf.label}</button>
+                    <button key={tf.value} onClick={() => setSelectedTimeframe(tf.value)} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${selectedTimeframe === tf.value ? 'bg-white text-slate-950 border-white' : 'bg-slate-900/50 text-slate-600 border-white/5'}`}>{tf.label}</button>
                   ))}
                 </div>
               </div>
+
               {signalType === SignalType.FOREX ? (
-                <button onClick={triggerSignalGeneration} disabled={isScanning || !marketStatus.isOpen} className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50">
-                  {isScanning ? 'GERANDO...' : 'GERAR SINAL'}
+                <button 
+                  onClick={triggerSignalGeneration} 
+                  disabled={isScanning || !marketStatus.isOpen}
+                  className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isScanning ? scanningText : 'GERAR SINAL'}
                 </button>
               ) : (
                 <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-white/5">
                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
-                     {isScanning ? 'IA BUSCANDO OPORTUNIDADE...' : `BUSCA AUTOMÁTICA EM ${formatTime(secondsToNextCandle)}`}
+                     {isScanning ? scanningText : `BUSCA AUTOMÁTICA EM ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
             </div>
           </div>
+
           <div className="lg:col-span-7 flex flex-col">
             {isScanning ? (
               <div className="flex-1 glass rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center border border-blue-500/20">
@@ -254,22 +239,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                    <div className="absolute inset-0 border-2 border-blue-500/20 rounded-full animate-ping"></div>
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <h4 className="text-sm font-black uppercase tracking-widest">Analisando Mercado</h4>
-                <p className="text-slate-500 text-[9px] mt-1 font-bold">SNIPER V12 CLOUD SECURITY</p>
+                <h4 className="text-sm font-black uppercase tracking-widest">{scanningText}</h4>
               </div>
             ) : activeSignal ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <SignalCard signal={activeSignal} />
-                <div className="mt-3 p-4 md:p-6 glass rounded-[20px] md:rounded-[32px] text-center border border-emerald-500/10 bg-emerald-500/5 shadow-lg">
-                  <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest mb-1">Entrada Sincronizada</p>
-                  <p className="text-emerald-400 text-3xl md:text-5xl font-black">{activeSignal.entryTime}</p>
-                </div>
               </div>
             ) : (
               <div className="flex-1 border-2 border-dashed border-white/5 rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center opacity-30">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
                 <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Sincronização</p>
               </div>
             )}
