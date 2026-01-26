@@ -33,16 +33,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const isAdmin = authPassword === 'admin_1992';
   const autoTriggeredRef = useRef<number | null>(null);
 
-  // BUG FIX: Garantir que o par selecionado mude quando a categoria muda
-  useEffect(() => {
-    if (assetCategory === 'CRYPTO') {
-      setSelectedPair(CRYPTO_PAIRS[0].symbol);
-    } else {
-      setSelectedPair(FOREX_PAIRS[0].symbol);
-    }
-    setActiveSignal(null);
-  }, [assetCategory]);
-
   const marketStatus = (() => {
     const now = new Date();
     const day = now.getDay(); 
@@ -62,16 +52,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       : { isOpen: true, isOTC: true, label: 'MERCADO EM OTC' };
   })();
 
-  const currentPairsList = assetCategory === 'CRYPTO' 
-    ? CRYPTO_PAIRS 
-    : (signalType === SignalType.BINARY && (marketStatus as any).isOTC ? OTC_PAIRS : FOREX_PAIRS);
+  // Lógica de filtragem de pares baseada no tipo de sinal e categoria
+  const currentPairsList = (() => {
+    let baseList = assetCategory === 'CRYPTO' 
+      ? CRYPTO_PAIRS 
+      : (signalType === SignalType.BINARY && (marketStatus as any).isOTC ? OTC_PAIRS : FOREX_PAIRS);
+    
+    // REGRA SOLICITADA: Remover XAU/USD se for Opções Binárias
+    if (signalType === SignalType.BINARY) {
+      return baseList.filter(p => p.symbol !== 'XAU/USD');
+    }
+    
+    return baseList;
+  })();
+
+  // Ajustar par selecionado se o atual sumir da lista filtrada
+  useEffect(() => {
+    if (!currentPairsList.find(p => p.symbol === selectedPair)) {
+      setSelectedPair(currentPairsList[0]?.symbol || '');
+    }
+    setActiveSignal(null);
+  }, [assetCategory, signalType, marketStatus.label]);
 
   const triggerSignalGeneration = async () => {
     if (isScanning || !marketStatus.isOpen) return;
     setIsScanning(true);
     setActiveSignal(null);
     
-    // Efeito visual de varredura
     const texts = ['ANALISANDO FLUXO...', 'IDENTIFICANDO PADRÕES...', 'VALIDANDO ENTRADA...', 'SINCRONIZANDO IA...'];
     for (const text of texts) {
       setScanningText(text);
@@ -83,7 +90,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         const signal = await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY);
         setActiveSignal(signal);
       } else {
-        // Garante que gera o sinal EXATO do par selecionado (BTC/USD etc)
         const signal = await generateSignal(selectedPair, selectedTimeframe, (marketStatus as any).isOTC, signalType);
         setActiveSignal(signal);
       }
@@ -119,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       if (tfSeconds === 59 && activeSignal) setActiveSignal(null);
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, selectedPair]);
+  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, selectedPair, currentPairsList]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col text-white">
