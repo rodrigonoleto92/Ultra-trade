@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS, SECURITY_VERSION, APP_USERS } from '../constants';
-import { Signal, Timeframe, SignalDirection, SignalType } from '../types';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { BINARY_TIMEFRAMES, FOREX_TIMEFRAMES, FOREX_PAIRS, CRYPTO_PAIRS, OTC_PAIRS, SECURITY_VERSION } from '../constants';
+import { Signal, Timeframe, SignalType } from '../types';
 import { generateSignal, scanForBestSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
@@ -33,53 +33,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const isAdmin = authPassword === 'admin_1992';
   const autoTriggeredRef = useRef<number | null>(null);
 
-  const marketStatus = (() => {
+  // Status do mercado memoizado para estabilidade
+  const marketStatus = useMemo(() => {
     const now = new Date();
     const day = now.getDay(); 
     const hour = now.getHours();
     const minutes = now.getMinutes();
     const timeValue = hour * 60 + minutes;
-    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO)' };
+
+    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO)', isOTC: false };
+    
     if (signalType === SignalType.FOREX) {
       const isWeekend = (day === 6) || (day === 0) || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
-      return isWeekend ? { isOpen: false, label: 'FECHADO' } : { isOpen: true, label: 'REAL (FOREX)' };
+      return isWeekend ? { isOpen: false, label: 'FECHADO', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
     }
+
     const isOBWeekend = (day === 6 || day === 0);
     const isWeekdayOpenHours = !isOBWeekend && timeValue >= 240 && timeValue <= 1080;
+    
     if (isOBWeekend) return { isOpen: true, isOTC: true, label: 'OTC (FINAL DE SEMANA)' };
     return isWeekdayOpenHours 
       ? { isOpen: true, isOTC: false, label: 'MERCADO REAL' }
       : { isOpen: true, isOTC: true, label: 'MERCADO EM OTC' };
-  })();
+  }, [assetCategory, signalType, Math.floor(Date.now() / 60000)]);
 
-  // Lógica de filtragem de pares baseada no tipo de sinal e categoria
-  const currentPairsList = (() => {
+  // Lista de ativos memoizada para evitar re-renderizações do sinal
+  const currentPairsList = useMemo(() => {
     let baseList = assetCategory === 'CRYPTO' 
       ? CRYPTO_PAIRS 
-      : (signalType === SignalType.BINARY && (marketStatus as any).isOTC ? OTC_PAIRS : FOREX_PAIRS);
+      : (signalType === SignalType.BINARY && marketStatus.isOTC ? OTC_PAIRS : FOREX_PAIRS);
     
-    // REGRA SOLICITADA: Remover XAU/USD se for Opções Binárias
     if (signalType === SignalType.BINARY) {
       return baseList.filter(p => p.symbol !== 'XAU/USD');
     }
-    
     return baseList;
-  })();
+  }, [assetCategory, signalType, marketStatus.isOTC]);
 
-  // Ajustar par selecionado se o atual sumir da lista filtrada
   useEffect(() => {
-    if (!currentPairsList.find(p => p.symbol === selectedPair)) {
+    const validPair = currentPairsList.find(p => p.symbol === selectedPair);
+    if (!validPair) {
       setSelectedPair(currentPairsList[0]?.symbol || '');
     }
+  }, [currentPairsList]);
+
+  // Limpeza de estado ao trocar de categoria
+  useEffect(() => {
     setActiveSignal(null);
-  }, [assetCategory, signalType, marketStatus.label]);
+    autoTriggeredRef.current = null;
+  }, [assetCategory, signalType, selectedTimeframe]);
 
   const triggerSignalGeneration = async () => {
     if (isScanning || !marketStatus.isOpen) return;
     setIsScanning(true);
-    setActiveSignal(null);
     
-    const texts = ['ANALISANDO FLUXO...', 'IDENTIFICANDO PADRÕES...', 'VALIDANDO ENTRADA...', 'SINCRONIZANDO IA...'];
+    const texts = ['VARRENDO MERCADO...', 'IDENTIFICANDO PADRÕES...', 'VALIDANDO ENTRADA...', 'SINCRONIZANDO IA...'];
     for (const text of texts) {
       setScanningText(text);
       await new Promise(r => setTimeout(r, 600));
@@ -90,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         const signal = await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY);
         setActiveSignal(signal);
       } else {
-        const signal = await generateSignal(selectedPair, selectedTimeframe, (marketStatus as any).isOTC, signalType);
+        const signal = await generateSignal(selectedPair, selectedTimeframe, marketStatus.isOTC, signalType);
         setActiveSignal(signal);
       }
     } catch (err) {
@@ -107,6 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       const minutes = now.getMinutes();
       let tfSeconds = 60;
       let currentBoundary = 0;
+
       if (selectedTimeframe === Timeframe.M1) {
         tfSeconds = 60 - seconds;
         currentBoundary = minutes;
@@ -117,15 +125,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         tfSeconds = (15 * 60) - ((minutes % 15) * 60 + seconds);
         currentBoundary = Math.floor(minutes / 15);
       }
+      
       setSecondsToNextCandle(tfSeconds);
-      if (signalType === SignalType.BINARY && tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
-        autoTriggeredRef.current = currentBoundary;
-        triggerSignalGeneration();
+      
+      if (signalType === SignalType.BINARY) {
+        // GERAÇÃO: Aparece aos 30 segundos restantes para a próxima vela
+        if (tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
+          autoTriggeredRef.current = currentBoundary;
+          triggerSignalGeneration();
+        }
+        
+        // LIMPEZA: Desaparece 10 segundos antes do novo sinal (ou seja, aos 40 segundos do cronômetro)
+        // Se tfSeconds é 40, faltam 10 segundos para chegar em 30 (onde gera o novo sinal)
+        if (tfSeconds === 40 && activeSignal && !isScanning) {
+          setActiveSignal(null);
+        }
       }
-      if (tfSeconds === 59 && activeSignal) setActiveSignal(null);
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, selectedPair, currentPairsList]);
+  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, isScanning, currentPairsList]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col text-white">
@@ -166,20 +184,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       </header>
 
       <main className="flex-1 flex flex-col items-center p-3 md:p-6 space-y-4 md:space-y-6 max-w-6xl mx-auto w-full">
-        {isAdmin && showAdminPanel && (
-          <div className="w-full animate-in slide-in-from-top duration-500">
-             <div className="glass p-6 rounded-[32px] border border-amber-500/30 bg-amber-500/5 shadow-2xl">
-                <h2 className="text-amber-500 font-black uppercase tracking-widest text-sm mb-4">Controle de Segurança Master</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                   <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">Versão: {SECURITY_VERSION}</p>
-                      <p className="text-[8px] text-amber-500/60 mt-2 font-bold uppercase">Logout Global: Mude a versão no constants.ts</p>
-                   </div>
-                </div>
-             </div>
-          </div>
-        )}
-
         <div className="w-full flex justify-center">
            <div className={`px-4 py-1.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${marketStatus.isOpen ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-rose-500/20 text-rose-400 bg-rose-500/5'}`}>
              <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${marketStatus.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
@@ -231,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
               ) : (
                 <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-white/5">
                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `BUSCA AUTOMÁTICA EM ${formatTime(secondsToNextCandle)}`}
+                     {isScanning ? scanningText : `PRÓXIMO CICLO EM ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
@@ -246,6 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h4 className="text-sm font-black uppercase tracking-widest">{scanningText}</h4>
+                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest">IA Sniper Cloud Connection</p>
               </div>
             ) : activeSignal ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -253,7 +258,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
               </div>
             ) : (
               <div className="flex-1 border-2 border-dashed border-white/5 rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center opacity-30">
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Sincronização</p>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Leitura de Mercado</p>
               </div>
             )}
           </div>

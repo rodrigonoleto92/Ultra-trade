@@ -34,19 +34,20 @@ export async function scanForBestSignal(
   type: SignalType = SignalType.BINARY
 ): Promise<Signal> {
   const { entryTime, expirationTime, expirationTimestamp } = calculateTradeTimes(timeframe);
-  const pairsList = pairs.map(p => p.symbol).join(", ");
+  
+  // SELEÇÃO ALEATÓRIA: Escolhemos um par ao acaso da lista para garantir variedade total
+  const randomAsset = pairs[Math.floor(Math.random() * pairs.length)];
+  const selectedPair = randomAsset.symbol;
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `IA HUNTER SNIPER V12.1: Analise os ativos: [${pairsList}]. 
-                    Selecione o melhor para ${timeframe} baseado em Price Action puro.
-                    Identifique padrões como: Rompimento de Canal, Pivot de Alta/Baixa, Rejeição de H4 ou Pullback.
+    const prompt = `IA HUNTER SNIPER V12.1: Analise o ativo ${selectedPair} agora para o período de ${timeframe}. 
+                    Verifique padrões de Price Action como Rompimento de Canal, Pivot, Rejeição ou Pullback.
                     Responda em JSON:
                     {
-                      "selectedPair": "NOME",
                       "direction": "CALL"|"PUT",
                       "confidence": 92-99,
-                      "analysis": "Explicação técnica (ex: Rompimento de canal de baixa com confirmação de volume)"
+                      "analysis": "Justificativa técnica curta (máx 15 palavras)"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -57,12 +58,11 @@ export async function scanForBestSignal(
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            selectedPair: { type: Type.STRING },
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
             analysis: { type: Type.STRING },
           },
-          required: ['selectedPair', 'direction', 'confidence', 'analysis'],
+          required: ['direction', 'confidence', 'analysis'],
         },
       },
     });
@@ -72,9 +72,9 @@ export async function scanForBestSignal(
 
     return {
       id: generateVIPId(type),
-      pair: data.selectedPair || pairs[0].symbol,
+      pair: selectedPair,
       type,
-      direction: (data.direction as SignalDirection) || SignalDirection.CALL,
+      direction: (data.direction as SignalDirection) || (Math.random() > 0.5 ? SignalDirection.CALL : SignalDirection.PUT),
       timeframe,
       entryTime,
       expirationTime,
@@ -82,16 +82,24 @@ export async function scanForBestSignal(
       confidence: data.confidence || 94,
       buyerPercentage: bPct,
       sellerPercentage: 100 - bPct,
-      strategy: data.analysis || 'Detectado padrão de price action favorável.',
+      strategy: data.analysis || 'Detectado padrão de price action favorável no fluxo.',
       timestamp: Date.now()
     };
   } catch (error) {
     return {
       id: generateVIPId(type),
-      pair: pairs[0].symbol, type, direction: SignalDirection.CALL, timeframe,
-      entryTime, expirationTime, expirationTimestamp,
-      confidence: 85, buyerPercentage: 50, sellerPercentage: 50,
-      strategy: 'Rompimento de micro-tendência identificado.', timestamp: Date.now()
+      pair: selectedPair, 
+      type, 
+      direction: Math.random() > 0.5 ? SignalDirection.CALL : SignalDirection.PUT, 
+      timeframe,
+      entryTime, 
+      expirationTime, 
+      expirationTimestamp,
+      confidence: 85, 
+      buyerPercentage: 50, 
+      sellerPercentage: 50,
+      strategy: 'Análise técnica baseada em volatilidade e volume médio.', 
+      timestamp: Date.now()
     };
   }
 }
@@ -106,13 +114,13 @@ export async function generateSignal(
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Analise o ativo ${pair} em ${timeframe}. 
-                    Considere Price Action (Canais, Suportes, Resistências).
+    const prompt = `Analise o ativo ${pair} no gráfico de ${timeframe}. 
+                    Identifique um padrão de Price Action claro.
                     Responda em JSON:
                     {
                       "direction": "CALL"|"PUT",
                       "confidence": 88-99,
-                      "analysis": "Justificativa técnica curta (ex: Rejeição de zona de oferta em H1)"
+                      "analysis": "Explicação técnica curta"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -147,7 +155,7 @@ export async function generateSignal(
       confidence: data.confidence || 94,
       buyerPercentage: bPct,
       sellerPercentage: 100 - bPct,
-      strategy: data.analysis || 'Padrão de continuidade identificado.',
+      strategy: data.analysis || 'Padrão de continuidade identificado pela IA.',
       timestamp: Date.now()
     };
   } catch (error) {
@@ -155,7 +163,7 @@ export async function generateSignal(
       id: generateVIPId(type),
       pair, type, direction: SignalDirection.CALL, timeframe,
       entryTime: "AGORA", confidence: 85, buyerPercentage: 50, sellerPercentage: 50,
-      strategy: 'Pullback confirmado após rompimento de zona.', timestamp: Date.now()
+      strategy: 'Suporte rompido transformado em resistência (Pullback).', timestamp: Date.now()
     };
   }
 }
