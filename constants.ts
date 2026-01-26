@@ -1,6 +1,10 @@
 
 import { CurrencyPair, MarketType, Timeframe } from './types';
 
+// CONTROLE DE SEGURANÇA GLOBAL
+// Altere este valor para desconectar TODOS os usuários ativos instantaneamente
+export const SECURITY_VERSION = 'v12.1.2'; 
+
 export const FOREX_PAIRS: CurrencyPair[] = [
   { symbol: 'XAU/USD', type: MarketType.FOREX },
   { symbol: 'EUR/USD', type: MarketType.FOREX },
@@ -51,20 +55,16 @@ export const FOREX_TIMEFRAMES = [
   { label: '1D', value: Timeframe.D1 },
 ];
 
-// Fallback para compatibilidade
-// wallace valid: 24/01/2027
 export const TIMEFRAMES = BINARY_TIMEFRAMES;
 
-// Configuração de verificação de licença externa
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
 // Estrutura de chaves com nomes associados
+// Se você remover alguém daqui, ele perde o acesso na hora.
 export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
-  { key: 'teste_2020', name: 'Usuário Teste' },
-  { key: 'admin_1992', name: 'Rodrigo' },
-  { key: 'duda2102', name: 'WALLACE' },
-  ];
+  { key: 'teste_30', name: 'Usuário Teste' },
+  { key: 'admin_1992', name: 'Rodrigo' }
+];
 
-// Mantido para compatibilidade de validação legada
 export const APP_PASSWORDS = APP_USERS.map(u => u.key);
