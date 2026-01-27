@@ -23,42 +23,38 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [assetCategory, setAssetCategory] = useState<'MOEDAS' | 'CRYPTO'>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [scanningText, setScanningText] = useState('IDENTIFICANDO PADRÕES...');
+  const [scanningText, setScanningText] = useState('ANALISANDO FLUXO...');
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
   
-  const isAdmin = authPassword === 'admin_1992';
   const autoTriggeredRef = useRef<number | null>(null);
 
-  // Status do mercado sincronizado com as regras de OTC solicitadas
   const marketStatus = useMemo(() => {
     const now = new Date();
-    const day = now.getDay(); // 0 (Dom) a 6 (Sab)
+    const day = now.getDay(); 
     const hour = now.getHours();
     const minutes = now.getMinutes();
     const timeValue = hour * 60 + minutes;
 
     if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO)', isOTC: false };
     
-    // Regra Forex: Aberto de Dom 18h até Sex 17h (aprox)
     if (signalType === SignalType.FOREX) {
       const isWeekend = (day === 6) || (day === 0) || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
-      return isWeekend ? { isOpen: false, label: 'MERCADO FECHADO', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
+      return isWeekend ? { isOpen: false, label: 'FECHADO (FX)', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
     }
 
-    // REGRA SOLICITADA OB: 
-    // Mercado Real: Seg-Sex das 04:00 (240 min) às 16:00 (960 min)
-    // OTC: Meio de semana das 16:01 às 03:59 e Finais de Semana Inteiros
+    // REGRA DE OURO: 
+    // Real: Seg-Sex 04:00 às 15:30
+    // OTC: 15:31 às 03:59 e Finais de Semana
     const isOBWeekend = (day === 6 || day === 0);
-    const isWeekdayRealTime = !isOBWeekend && timeValue >= 240 && timeValue <= 960;
+    const isWeekdayRealTime = !isOBWeekend && timeValue >= 240 && timeValue < 930;
     
-    if (isOBWeekend) return { isOpen: true, isOTC: true, label: 'OTC (FINAL DE SEMANA)' };
+    if (isOBWeekend) return { isOpen: true, isOTC: true, label: 'MERCADO OTC' };
     return isWeekdayRealTime 
-      ? { isOpen: true, isOTC: false, label: 'MERCADO REAL (ABERTO)' }
-      : { isOpen: true, isOTC: true, label: 'MERCADO EM OTC' };
+      ? { isOpen: true, isOTC: false, label: 'MERCADO REAL' }
+      : { isOpen: true, isOTC: true, label: 'MERCADO OTC' };
   }, [assetCategory, signalType, Math.floor(Date.now() / 60000)]);
 
   const currentPairsList = useMemo(() => {
@@ -83,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     if (isScanning || !marketStatus.isOpen) return;
     setIsScanning(true);
     
-    const texts = ['MAPEANDO ESTRUTURA...', 'LOCALIZANDO CANAIS...', 'ANALISANDO REJEIÇÕES...', 'SINCRONIZANDO SNIPER...'];
+    const texts = ['MAPEANDO ESTRUTURA...', 'LOCALIZANDO CANAIS...', 'ANALISANDO REJEIÇÕES...', 'ULTRA SNIPER ATIVO...'];
     for (const text of texts) {
       setScanningText(text);
       await new Promise(r => setTimeout(r, 600));
@@ -160,13 +156,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
              }`}></div>
           </div>
           
-          <div className="flex gap-2">
-            <button onClick={onLogout} className="p-3 bg-white/5 border border-white/10 rounded-2xl">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
+          <button onClick={onLogout} className="p-3 bg-white/5 border border-white/10 rounded-2xl transition-colors hover:bg-rose-500/10 group">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-slate-400 group-hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -181,7 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 w-full">
           <div className="lg:col-span-5 space-y-4">
             <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-5">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Configuração Sniper</h3>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Ultra Trade Sniper</h3>
               
               <div className="space-y-4">
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -191,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                   <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>OB (AUTO)</button>
-                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>FX / CRY (MANUAL)</button>
+                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>MANUAL</button>
                 </div>
 
                 {signalType === SignalType.FOREX && (
@@ -217,12 +211,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                   disabled={isScanning || !marketStatus.isOpen}
                   className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isScanning ? scanningText : 'GERAR ANÁLISE SNIPER'}
+                  {isScanning ? scanningText : 'GERAR ANÁLISE ULTRA'}
                 </button>
               ) : (
                 <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-white/5">
                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `PRÓXIMO CICLO AUTOMÁTICO EM ${formatTime(secondsToNextCandle)}`}
+                     {isScanning ? scanningText : `AUTO-ANALYSIS EM ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
@@ -237,7 +231,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h4 className="text-sm font-black uppercase tracking-widest">{scanningText}</h4>
-                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest">Calculando Probabilidades via Price Action</p>
+                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest">Leitura Pura de Price Action</p>
               </div>
             ) : activeSignal ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -248,7 +242,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Sincronização de Fluxo</p>
+                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Estudo de Preço</p>
               </div>
             )}
           </div>
@@ -256,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       </main>
 
       <footer className="py-4 text-center border-t border-white/5 mt-auto bg-black/20">
-        <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">Ultra Sniper {SECURITY_VERSION} Global Terminal</p>
+        <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">Ultra Trade {SECURITY_VERSION} Global Terminal</p>
       </footer>
     </div>
   );
