@@ -23,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [assetCategory, setAssetCategory] = useState<'MOEDAS' | 'CRYPTO'>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
+  const [isAutoMode, setIsAutoMode] = useState(true); // NOVO: Estado do Toggle
   
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -87,7 +88,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
     try {
       if (signalType === SignalType.BINARY) {
-        const signal = await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY);
+        // No modo manual (Toggle OFF), podemos escolher o par ou usar o scanner
+        const signal = isAutoMode 
+          ? await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY)
+          : await generateSignal(selectedPair, selectedTimeframe, marketStatus.isOTC, SignalType.BINARY);
         setActiveSignal(signal);
       } else {
         const signal = await generateSignal(selectedPair, selectedTimeframe, marketStatus.isOTC, signalType);
@@ -121,7 +125,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       
       setSecondsToNextCandle(tfSeconds);
       
-      if (signalType === SignalType.BINARY) {
+      // Lógica Automática: Só dispara se isAutoMode for TRUE
+      if (signalType === SignalType.BINARY && isAutoMode) {
         if (tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
           autoTriggeredRef.current = currentBoundary;
           triggerSignalGeneration();
@@ -133,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, isScanning, currentPairsList]);
+  }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, isScanning, currentPairsList, isAutoMode]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col text-white">
@@ -175,7 +180,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 w-full">
           <div className="lg:col-span-5 space-y-4">
             <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-5">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Ultra Trade Sniper</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Ultra Trade Sniper</h3>
+                
+                {/* NOVO: Toggle Modo Automático/Manual */}
+                {signalType === SignalType.BINARY && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Automático</span>
+                    <button 
+                      onClick={() => setIsAutoMode(!isAutoMode)}
+                      className={`w-10 h-5 rounded-full transition-colors relative flex items-center px-1 ${isAutoMode ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                    >
+                      <div className={`h-3 w-3 bg-white rounded-full transition-transform ${isAutoMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
+                )}
+              </div>
               
               <div className="space-y-4">
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -184,11 +204,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
 
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
-                  <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>OB (AUTO)</button>
-                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>MANUAL</button>
+                  <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>OB (BINÁRIAS)</button>
+                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>FOREX/CRY</button>
                 </div>
 
-                {signalType === SignalType.FOREX && (
+                {/* Mostra seletor de par se estiver no modo manual de OB ou em Forex */}
+                {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) && (
                   <select 
                     value={selectedPair} 
                     onChange={(e) => setSelectedPair(e.target.value)}
@@ -205,18 +226,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {signalType === SignalType.FOREX ? (
+              {/* Lógica de Botão: Aparece se for Forex OU se for OB Manual */}
+              {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) ? (
                 <button 
                   onClick={triggerSignalGeneration} 
                   disabled={isScanning || !marketStatus.isOpen}
-                  className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
+                  className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-blue-500/20"
                 >
                   {isScanning ? scanningText : 'GERAR ANÁLISE ULTRA'}
                 </button>
               ) : (
                 <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-white/5">
                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `AUTO-ANALYSIS EM ${formatTime(secondsToNextCandle)}`}
+                     {isScanning ? scanningText : `CICLO AUTO-SNIPER EM ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
