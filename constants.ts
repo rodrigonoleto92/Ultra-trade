@@ -63,7 +63,7 @@ export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
   { key: 'duda2102', name: 'WALLACE' },
   { key: '03silva#', name: 'Eduardo' },
-  { key: 'ADMIN@@', name: 'Administrador' },
+  { key: 'teste@1', name: 'teste' },
 ];
 
 export const APP_PASSWORDS = APP_USERS.map(u => u.key);
