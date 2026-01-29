@@ -19,92 +19,113 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
 
     const interval = setInterval(() => {
       setDynamicBuyer(prev => {
-        const drift = (Math.random() - 0.5) * 2;
-        const newVal = Math.min(Math.max(prev + drift, 10), 90);
+        const drift = (Math.random() - 0.5) * 1.5;
+        const newVal = Math.min(Math.max(prev + drift, 5), 95);
         setDynamicSeller(100 - newVal);
         return newVal;
       });
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [signal.id, signal.buyerPercentage, signal.sellerPercentage]);
 
+  // Valores dinâmicos baseados na confiança e direção
+  const volumeValue = `${Math.floor(signal.confidence * 0.9 + Math.random() * 5)}%`;
+  const tendencyValue = `${Math.floor(signal.confidence * 0.85 + Math.random() * 8)}%`;
+  const riskValue = `${Math.floor(100 - signal.confidence + Math.random() * 10)}%`;
+
   return (
-    <div className={`glass rounded-[24px] md:rounded-[32px] overflow-hidden border-t-4 md:border-t-0 md:border-l-8 ${isCall ? 'border-emerald-500' : 'border-rose-500'} shadow-2xl transition-all duration-700`}>
+    <div className={`glass rounded-[24px] md:rounded-[32px] overflow-hidden border-t-4 md:border-t-0 md:border-l-8 ${isCall ? 'border-emerald-500' : 'border-rose-500'} shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-700`}>
       <div className="p-4 md:p-6">
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-lg md:text-2xl font-black text-white">{signal.pair}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[7px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">{signal.type} • {signal.timeframe}</span>
-              <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-                <div className="h-1 w-1 rounded-full bg-blue-400 animate-pulse"></div>
-                <span className="text-[7px] font-black text-blue-400 uppercase tracking-tighter">ANÁLISE ATIVA</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] font-black text-slate-300 uppercase tracking-tighter">
+                {isForex ? 'INSTITUCIONAL' : 'OPÇÕES SNIPER'}
+              </span>
+              <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
+            </div>
+            <h3 className="text-xl md:text-3xl font-black text-white tracking-tight">{signal.pair}</h3>
+          </div>
+          <div className="text-right">
+            <div className={`text-[9px] md:text-[11px] font-black px-3 py-1.5 rounded-xl border ${signal.confidence > 90 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
+              {Math.floor(signal.confidence)}% <span className="opacity-50">PROBABILIDADE</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={`flex flex-col items-center justify-center py-6 rounded-3xl mb-5 shadow-inner transition-all hover:brightness-110 active:scale-[0.98] cursor-default ${isCall ? 'signal-call animate-flash-call' : 'signal-put animate-flash-put'}`}>
+          <div className="flex items-center gap-4">
+            {isCall ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 11l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M19 13l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            )}
+            <div className="flex flex-col">
+              <span className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase leading-none">
+                {isCall ? 'COMPRAR' : 'VENDER'}
+              </span>
+              <span className="text-[10px] font-bold text-white/70 uppercase tracking-[0.2em] mt-1">
+                {isCall ? 'ALTA CONFIRMAÇÃO' : 'BAIXA CONFIRMAÇÃO'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="bg-black/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+            <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Início da Vela</span>
+            <span className="text-lg font-mono font-black text-white">{signal.entryTime}</span>
+          </div>
+          <div className="bg-black/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+            <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Final da Vela</span>
+            <span className="text-lg font-mono font-black text-white">{isForex ? 'TAKE PROFIT' : signal.expirationTime}</span>
+          </div>
+        </div>
+
+        <div className="mb-5 space-y-2">
+          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest px-1">
+            <span className={isCall ? 'text-emerald-400' : 'text-slate-500'}>Pressão de Compra</span>
+            <span className={!isCall ? 'text-rose-400' : 'text-slate-500'}>Pressão de Venda</span>
+          </div>
+          <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden flex border border-white/5">
+            <div className="h-full bg-emerald-500 shadow-[0_0_15px_#10b981] transition-all duration-1000 ease-out" style={{ width: `${dynamicBuyer}%` }}></div>
+            <div className="h-full bg-rose-500 shadow-[0_0_15px_#ef4444] transition-all duration-1000 ease-out" style={{ width: `${dynamicSeller}%` }}></div>
+          </div>
+        </div>
+
+        <div className={`p-5 rounded-2xl border backdrop-blur-sm ${isCall ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`h-2 w-2 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Justificativa do Analista</span>
+          </div>
+          <p className="text-[12px] md:text-[14px] text-white/90 leading-relaxed font-semibold italic">
+            "{signal.strategy}"
+          </p>
+          <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[7px] text-slate-600 font-black uppercase">Volume</span>
+              <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
+                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: volumeValue }}></div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[7px] text-slate-600 font-black uppercase">Tendência</span>
+              <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
+                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: tendencyValue }}></div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[7px] text-slate-600 font-black uppercase">Risco</span>
+              <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: riskValue }}></div>
               </div>
             </div>
           </div>
-          <div className={`text-[8px] md:text-[10px] font-black px-2 py-1 rounded-lg border ${signal.confidence > 85 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-            {signal.confidence}% ACERTIVIDADE
-          </div>
-        </div>
-
-        <div className={`flex items-center justify-center py-5 rounded-2xl mb-4 shadow-xl transition-transform active:scale-95 ${isCall ? 'signal-call animate-flash-call' : 'signal-put animate-flash-put'}`}>
-          <div className="flex items-center gap-3">
-            {isCall ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            )}
-            <span className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">
-              {isCall ? 'COMPRAR' : 'VENDER'}
-            </span>
-          </div>
-        </div>
-
-        {/* Gerenciamento FX/CRYPTO */}
-        {isForex && (
-          <div className="mb-4 bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl text-center">
-            <p className="text-[8px] text-blue-400 font-black uppercase mb-1 tracking-widest">Alvo de Operação</p>
-            <p className="text-xs font-bold text-white uppercase italic">
-              {isCall ? 'Stop no fundo anterior • Alvo 2:1' : 'Stop no topo anterior • Alvo 2:1'}
-            </p>
-          </div>
-        )}
-
-        <div className="mb-4 bg-slate-900/60 p-3 rounded-xl border border-white/5">
-          <div className="flex justify-between text-[7px] md:text-[9px] font-black uppercase mb-1.5">
-            <span className="text-emerald-400">{dynamicBuyer.toFixed(0)}% COMPRADORES</span>
-            <span className="text-rose-400">{dynamicSeller.toFixed(0)}% VENDEDORES</span>
-          </div>
-          <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
-            <div className="h-full bg-emerald-500 shadow-[0_0_8px_#10b981] transition-all duration-1000" style={{ width: `${dynamicBuyer}%` }}></div>
-            <div className="h-full bg-rose-500 shadow-[0_0_8px_#ef4444] transition-all duration-1000" style={{ width: `${dynamicSeller}%` }}></div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <div className="bg-slate-900/80 p-3 rounded-xl border border-white/5 text-center">
-            <p className="text-[7px] text-slate-500 font-black mb-1 uppercase tracking-widest">Entrada</p>
-            <p className="text-sm font-mono font-black text-white">{signal.entryTime}</p>
-          </div>
-          <div className="bg-slate-900/80 p-3 rounded-xl border border-white/5 text-center">
-            <p className="text-[7px] text-slate-500 font-black mb-1 uppercase tracking-widest">Expiração</p>
-            <p className="text-sm font-mono font-black text-white">{isForex ? 'AUTO-PROFIT' : signal.expirationTime}</p>
-          </div>
-        </div>
-
-        <div className={`p-4 rounded-xl border ${isCall ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`h-1.5 w-1.5 rounded-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 italic">Sniper Vision v15.0</span>
-          </div>
-          <p className="text-[11px] md:text-[12px] text-white leading-relaxed font-bold">
-            "{signal.strategy}"
-          </p>
         </div>
       </div>
     </div>

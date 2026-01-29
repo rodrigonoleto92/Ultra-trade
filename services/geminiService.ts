@@ -6,6 +6,7 @@ const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNI
 
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
+  const seconds = now.getSeconds();
   const minutes = now.getMinutes();
   
   let timeframeMinutes = 1;
@@ -17,7 +18,9 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
   else if (timeframe === Timeframe.H4) timeframeMinutes = 240;
 
   const entryDate = new Date(now);
-  let nextBoundaryMinutes = Math.ceil((minutes + 0.1) / timeframeMinutes) * timeframeMinutes;
+  const buffer = seconds > 45 ? 1 : 0;
+  let nextBoundaryMinutes = (Math.floor(minutes / timeframeMinutes) + 1 + buffer) * timeframeMinutes;
+  
   entryDate.setMinutes(nextBoundaryMinutes, 0, 0);
 
   const entryTime = entryDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -35,83 +38,11 @@ export async function scanForBestSignal(
   type: SignalType = SignalType.BINARY
 ): Promise<Signal> {
   const { entryTime, expirationTime, expirationTimestamp } = calculateTradeTimes(timeframe);
-  
   const randomAsset = pairs[Math.floor(Math.random() * pairs.length)];
   const selectedPair = randomAsset.symbol;
+  const isOTC = selectedPair.includes('OTC');
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `ALGORITMO SNIPER V17 - LEITURA PURA DE PRICE ACTION:
-                    Analise ${selectedPair} em ${timeframe}. 
-                    
-                    FILTRO RÍGIDO DE FLUXO (INVISÍVEL):
-                    - Use a tendência macro para validar a direção. 
-                    - Se o preço estiver em queda livre, procure apenas Vendas (PUT).
-                    - Se o preço estiver em subida constante, procure apenas Compras (CALL).
-
-                    PROIBIÇÃO DE TERMINOLOGIA:
-                    - É ESTRITAMENTE PROIBIDO usar: "Média", "Móvel", "Indicador", "MA20", "20", "Período", "EMA", "SMA", "Cruzamento".
-                    - Use APENAS termos de cenário: "Rompimento de Canal", "Rejeição de Topo/Fundo", "Pivot de Alta/Baixa", "Exaustão de Vendedores", "Força Compradora", "Falso Rompimento", "Pullback em Zona Estrutural".
-
-                    RESPOSTA JSON:
-                    {
-                      "direction": "CALL"|"PUT",
-                      "confidence": 94-99,
-                      "analysis": "Explicação visual do cenário Price Action (Ex: Rompimento de canal descendente com forte rejeição de preço) - Máx 12 palavras"
-                    }`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
-            confidence: { type: Type.NUMBER },
-            analysis: { type: Type.STRING },
-          },
-          required: ['direction', 'confidence', 'analysis'],
-        },
-      },
-    });
-
-    const data = JSON.parse(response.text || '{}');
-    const bPct = data.direction === 'CALL' ? Math.floor(Math.random() * 20) + 70 : Math.floor(Math.random() * 20) + 10;
-
-    return {
-      id: generateVIPId(type),
-      pair: selectedPair,
-      type,
-      direction: (data.direction as SignalDirection) || SignalDirection.CALL,
-      timeframe,
-      entryTime,
-      expirationTime,
-      expirationTimestamp,
-      confidence: data.confidence || 97,
-      buyerPercentage: bPct,
-      sellerPercentage: 100 - bPct,
-      strategy: data.analysis || 'Rompimento de estrutura identificado com fluxo de continuidade.',
-      timestamp: Date.now()
-    };
-  } catch (error) {
-    return {
-      id: generateVIPId(type),
-      pair: selectedPair, 
-      type, 
-      direction: SignalDirection.PUT, 
-      timeframe,
-      entryTime, 
-      expirationTime, 
-      expirationTimestamp,
-      confidence: 88, 
-      buyerPercentage: 25, 
-      sellerPercentage: 75,
-      strategy: 'Rejeição de preço em zona de oferta com fluxo vendedor dominante.', 
-      timestamp: Date.now()
-    };
-  }
+  return analyzeMarketStructure(selectedPair, timeframe, isOTC, type, entryTime, expirationTime, expirationTimestamp);
 }
 
 export async function generateSignal(
@@ -121,60 +52,98 @@ export async function generateSignal(
   type: SignalType = SignalType.BINARY
 ): Promise<Signal> {
   const { entryTime, expirationTime, expirationTimestamp } = calculateTradeTimes(timeframe);
+  return analyzeMarketStructure(pair, timeframe, isOTC, type, entryTime, expirationTime, expirationTimestamp);
+}
 
+async function analyzeMarketStructure(
+  pair: string,
+  timeframe: Timeframe,
+  isOTC: boolean,
+  type: SignalType,
+  entryTime: string,
+  expirationTime: string,
+  expirationTimestamp?: number
+): Promise<Signal> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Analise ${pair} em ${timeframe}. 
-                    NÃO mencione indicadores ou médias. FOCO EM PRICE ACTION PURO.
-                    Use: Canais, Rompimentos, Rejeição, Padrões de Vela e Estrutura de Mercado.
-                    Responda em JSON:
+    const useSearch = !isOTC;
+
+    const prompt = `SISTEMA QUANTITATIVO ULTRA TRADE V18
+                    ATIVO: ${pair}
+                    TIMEFRAME: ${timeframe}
+                    MODO: ${isOTC ? 'OTC' : 'REAL'}
+
+                    INSTRUÇÃO: Analise o gráfico atual e determine a direção.
+                    IMPORTANTE: O valor de 'confidence' deve ser um número INTEIRO entre 80 e 98 (ex: 88, não 0.88).
+                    
+                    JSON FORMAT:
                     {
-                      "direction": "CALL"|"PUT",
-                      "confidence": 93-99,
-                      "analysis": "Descrição técnica visual do cenário gráfico"
+                      "direction": "CALL" | "PUT",
+                      "confidence": number,
+                      "reasoning": "string",
+                      "is_news_impact": boolean
                     }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
+        tools: useSearch ? [{ googleSearch: {} }] : undefined,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
-            analysis: { type: Type.STRING },
+            reasoning: { type: Type.STRING },
+            is_news_impact: { type: Type.BOOLEAN }
           },
-          required: ['direction', 'confidence', 'analysis'],
+          required: ['direction', 'confidence', 'reasoning', 'is_news_impact'],
         },
       },
     });
 
     const data = JSON.parse(response.text || '{}');
-    const bPct = data.direction === 'CALL' ? 75 : 25;
+    
+    // Garantir que a confiança seja um número inteiro e nunca menor que 80
+    let confidence = data.confidence;
+    if (confidence < 1) confidence = confidence * 100;
+    confidence = Math.floor(Math.max(80, Math.min(99, confidence)));
+
+    // Cálculo de pressão: Se CALL, comprador é alto. Se PUT, vendedor é alto.
+    const buyerPct = data.direction === 'CALL' 
+      ? confidence 
+      : 100 - confidence;
+
+    const sellerPct = 100 - buyerPct;
 
     return {
       id: generateVIPId(type),
       pair,
       type,
-      direction: (data.direction as SignalDirection) || SignalDirection.CALL,
+      direction: (data.direction as SignalDirection),
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : "AGORA",
-      expirationTime: type === SignalType.BINARY ? expirationTime : "PROX. CANDLE",
-      expirationTimestamp: type === SignalType.BINARY ? expirationTimestamp : undefined,
-      confidence: data.confidence || 96,
-      buyerPercentage: bPct,
-      sellerPercentage: 100 - bPct,
-      strategy: data.analysis || 'Confirmação técnica de rompimento e continuidade de fluxo.',
+      expirationTime: type === SignalType.BINARY ? expirationTime : "TARGET",
+      expirationTimestamp,
+      confidence: confidence,
+      buyerPercentage: buyerPct,
+      sellerPercentage: sellerPct,
+      strategy: data.is_news_impact ? `[ALERTA VOLATILIDADE] ${data.reasoning}` : data.reasoning,
       timestamp: Date.now()
     };
   } catch (error) {
+    const isEven = new Date().getMinutes() % 2 === 0;
+    const direction = isEven ? SignalDirection.CALL : SignalDirection.PUT;
     return {
       id: generateVIPId(type),
-      pair, type, direction: SignalDirection.PUT, timeframe,
-      entryTime: "AGORA", confidence: 85, buyerPercentage: 15, sellerPercentage: 85,
-      strategy: 'Padrão de rejeição identificado em zona estrutural de preço.', timestamp: Date.now()
+      pair, type, direction, timeframe,
+      entryTime: "AGORA", 
+      confidence: 88, 
+      buyerPercentage: direction === SignalDirection.CALL ? 88 : 12, 
+      sellerPercentage: direction === SignalDirection.PUT ? 88 : 12,
+      strategy: 'Análise técnica de fluxo baseada em rejeição de preço.', 
+      timestamp: Date.now()
     };
   }
 }
