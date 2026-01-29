@@ -65,7 +65,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M19 13l-7 7m0 0l-7-7m7 7V3" />
               </svg>
             )}
-            <div className="flex flex-col">
+            <div className="flex flex-col text-center">
               <span className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none">
                 {isCall ? 'COMPRAR' : 'VENDER'}
               </span>
