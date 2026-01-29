@@ -63,7 +63,7 @@ export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuar
 // Se você remover alguém daqui, ele perde o acesso na hora.
 export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
-  { key: 'teste_155', name: 'Usuário Teste' },
+  { key: 'teste_141', name: 'Usuário Teste' },
   { key: 'admin_1992', name: 'Rodrigo' },
   { key: 'duda2102', name: 'WALLACE' },
 ];
