@@ -130,7 +130,7 @@ const App: React.FC = () => {
     return <Success onGoToLogin={() => setView('LOGIN')} />;
   }
 
-  return <Login onLogin={handleLogin} onGoToRegister={() => setView('REGISTER')} />;
+  return <Login onLogin={handleLogin} />;
 };
 
 export default App;

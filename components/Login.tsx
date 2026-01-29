@@ -4,10 +4,9 @@ import Logo from './Logo';
 
 interface LoginProps {
   onLogin: (password: string) => Promise<void>;
-  onGoToRegister: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -91,15 +90,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
               </div>
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-white/5 text-center">
-            <button 
-              onClick={onGoToRegister}
-              className="text-[10px] font-black text-slate-500 hover:text-emerald-400 uppercase tracking-widest transition-colors"
-            >
-              Não tem licença? Criar uma agora
-            </button>
-          </div>
         </div>
       </div>
     </div>
