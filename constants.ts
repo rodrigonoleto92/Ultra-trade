@@ -2,7 +2,6 @@
 import { CurrencyPair, MarketType, Timeframe } from './types';
 
 // CONTROLE DE SEGURANÇA GLOBAL
-// Altere este valor para desconectar TODOS os usuários ativos instantaneamente
 export const SECURITY_VERSION = 'v12.1.2'; 
 
 export const FOREX_PAIRS: CurrencyPair[] = [
@@ -15,7 +14,7 @@ export const FOREX_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/GBP', type: MarketType.FOREX },
   { symbol: 'EUR/JPY', type: MarketType.FOREX },
   { symbol: 'GBP/JPY', type: MarketType.FOREX },
-  ];
+];
 
 export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'EUR/USD (OTC)', type: MarketType.OTC },
@@ -55,18 +54,16 @@ export const FOREX_TIMEFRAMES = [
   { label: '1D', value: Timeframe.D1 },
 ];
 
-export const TIMEFRAMES = BINARY_TIMEFRAMES;
-
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
-// Estrutura de chaves com nomes associados
-// Se você remover alguém daqui, ele perde o acesso na hora.
+// Lista de usuários restaurada para o padrão original
+// Agora aceitando caracteres especiais e maiúsculas na validação
 export const APP_USERS = [
-  { key: 'ruan_vitalicio', name: 'Ruan' },
-  { key: 'teste_141', name: 'Usuário Teste' },
-  { key: 'admin_1992', name: 'Rodrigo' },
-  { key: 'duda2102', name: 'WALLACE' },
+  { key: 'RODRIGO', name: 'Rodrigo' },
+  { key: 'RUAN', name: 'Ruan' },
+  { key: 'WALLACE', name: 'WALLACE' },
   { key: '03silva#', name: 'Eduardo' },
+  { key: 'ADMIN', name: 'Administrador' },
 ];
 
 export const APP_PASSWORDS = APP_USERS.map(u => u.key);

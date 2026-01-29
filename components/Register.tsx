@@ -22,11 +22,13 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBackToLogin }) => {
       return;
     }
 
-    // Simula a adição ao "banco de dados" do app
-    const existing = JSON.parse(localStorage.getItem('registered_users') || '[]');
-    localStorage.setItem('registered_users', JSON.stringify([...existing, formData.password]));
+    // Salvando no LocalStorage para validação no App.tsx
+    const existing = JSON.parse(localStorage.getItem('registered_users_data') || '[]');
+    localStorage.setItem('registered_users_data', JSON.stringify([...existing, { 
+      name: formData.name, 
+      password: formData.password 
+    }]));
 
-    // Dispara o sucesso para o App.tsx mudar de página
     onSuccess(formData.password);
   };
 
@@ -35,80 +37,65 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBackToLogin }) => {
       <div className="text-center mb-8">
         <Logo size="lg" className="justify-center mb-6" hideText />
         <h1 className="text-3xl font-bold mb-2">
-          Crie sua conta no <span className="logo-gradient-text">Ultra Trade</span>
+          Nova <span className="logo-gradient-text">Licença</span>
         </h1>
-        <p className="text-slate-500 text-sm">Simples, rápido e seguro.</p>
+        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">Preencha os dados abaixo</p>
       </div>
 
-      <div className="bg-[#0f0f0f] border border-[#1f1f1f] p-8 rounded-2xl w-full max-w-[420px] shadow-2xl">
-        <form 
-          action="https://formsubmit.co/noletor831@gmail.com" 
-          method="POST"
-          onSubmit={handleSubmit}
-          className="space-y-5"
-        >
-          {/* FormSubmit Configs */}
-          <input type="hidden" name="_captcha" value="false" />
-          
+      <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[32px] w-full max-w-[420px] shadow-2xl">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome Completo</label>
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-2">Seu Nome</label>
             <input 
               type="text" 
-              name="name" 
               required 
-              placeholder="Ex: João Silva"
+              placeholder="Ex: Rodrigo Sniper"
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
-              className="w-full bg-[#16181a] border border-[#2d2d2d] p-4 rounded-lg text-white outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all text-sm font-bold"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Crie uma Senha</label>
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-2">Senha VIP (Aceita @#$)</label>
             <input 
-              type="password" 
-              name="password" 
+              type="text" 
               required 
-              placeholder="••••••••"
+              placeholder="Senha Complexa 123!"
               value={formData.password}
               onChange={e => setFormData({...formData, password: e.target.value})}
-              className="w-full bg-[#16181a] border border-[#2d2d2d] p-4 rounded-lg text-white outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all text-sm font-mono"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Repita a Senha</label>
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-2">Confirme a Senha</label>
             <input 
               type="password" 
-              name="confirm-password" 
               required 
               placeholder="••••••••"
               value={formData.confirm}
               onChange={e => setFormData({...formData, confirm: e.target.value})}
-              className="w-full bg-[#16181a] border border-[#2d2d2d] p-4 rounded-lg text-white outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all text-sm font-mono"
             />
           </div>
 
-          {error && <p className="text-rose-500 text-xs font-bold text-center">{error}</p>}
+          {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest">{error}</p>}
 
           <button 
             type="submit" 
-            className="w-full py-4 rounded-lg bg-gradient-to-r from-[#34d399] to-[#3b82f6] text-white font-bold text-lg hover:opacity-90 active:scale-[0.98] transition-all"
+            className="w-full py-5 rounded-2xl logo-gradient-bg text-slate-900 font-black uppercase text-xs tracking-widest hover:opacity-90 transition-all"
           >
-            Fazer Cadastro
+            GERAR LICENÇA AGORA
           </button>
         </form>
 
         <button 
           onClick={onBackToLogin}
-          className="w-full mt-4 text-[10px] text-slate-500 uppercase font-black hover:text-slate-300 transition-colors"
+          className="w-full mt-6 text-[10px] text-slate-500 uppercase font-black hover:text-white transition-colors tracking-widest"
         >
-          Já tenho uma conta. Voltar ao Login
+          Voltar ao Login
         </button>
-      </div>
-
-      <div className="mt-10 text-[10px] text-[#374151] tracking-widest font-bold">
-        © 2026 ULTRA TRADE • CRIPTOGRAFIA ATIVA
       </div>
     </div>
   );

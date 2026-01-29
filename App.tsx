@@ -2,21 +2,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import Register from './components/Register';
+import Success from './components/Success';
 import { APP_USERS, REMOTE_PASSWORDS_URL, SECURITY_VERSION } from './constants';
 
-const INACTIVITY_LIMIT = 10 * 60 * 1000;
-const SECURITY_CHECK_INTERVAL = 30000; // 30 segundos
+type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
+
+const SECURITY_CHECK_INTERVAL = 30000;
 
 const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+  const [view, setView] = useState<AppView>(() => {
     const savedVersion = sessionStorage.getItem('ultra_v');
     if (savedVersion && savedVersion !== SECURITY_VERSION) {
       sessionStorage.clear();
-      return false;
+      return 'LOGIN';
     }
-    return !!sessionStorage.getItem('ultra_trade_session');
+    return sessionStorage.getItem('ultra_trade_session') ? 'DASHBOARD' : 'LOGIN';
   });
-  
+
   const [authPassword, setAuthPassword] = useState<string | null>(() => {
     return sessionStorage.getItem('ultra_trade_session');
   });
@@ -26,62 +29,59 @@ const App: React.FC = () => {
   });
   
   const [isVerifying, setIsVerifying] = useState(false);
-  const inactivityTimerRef = useRef<number | null>(null);
 
   const handleLogout = useCallback(() => {
     setAuthPassword(null);
-    setIsLoggedIn(false);
+    setView('LOGIN');
     sessionStorage.clear();
-    if (inactivityTimerRef.current) {
-      window.clearTimeout(inactivityTimerRef.current);
-    }
   }, []);
 
   const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
-    // 1. Validação local (Lista fixa no código)
+    // Validação estrita: respeita maiúsculas, minúsculas e caracteres especiais (===)
+    
+    // 1. Verificação na lista de usuários fixos
     const user = APP_USERS.find(u => u.key === pass);
     if (user) return { isValid: true, name: user.name };
 
-    // 2. Validação Remota (Busca no link externo se configurado)
+    // 2. Verificação em usuários registrados localmente no navegador
+    const localUsersRaw = localStorage.getItem('registered_users_data');
+    if (localUsersRaw) {
+      const localUsers = JSON.parse(localUsersRaw);
+      const localUser = localUsers.find((u: any) => u.password === pass);
+      if (localUser) return { isValid: true, name: localUser.name };
+    }
+
+    // 3. Verificação remota (opcional)
     try {
       const response = await fetch(`${REMOTE_PASSWORDS_URL}?t=${Date.now()}`);
       if (response.ok) {
         const text = await response.text();
-        const remoteList = text.split('\n').map(p => p.trim()).filter(p => p.length > 0);
-        if (remoteList.includes(pass)) return { isValid: true, name: 'Trader VIP (Remoto)' };
+        const remoteList = text.split('\n').map(p => p.trim());
+        if (remoteList.includes(pass)) return { isValid: true, name: 'Acesso VIP' };
       }
     } catch (e) {
-      console.warn("Falha ao validar remotamente, usando apenas lista local.");
+      // Falha silenciosa na remota
     }
 
     return { isValid: false };
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn || !authPassword) return;
+    if (view !== 'DASHBOARD' || !authPassword) return;
 
     const performStrictValidation = async () => {
       setIsVerifying(true);
-      
-      const currentSessVersion = sessionStorage.getItem('ultra_v');
-      if (currentSessVersion !== SECURITY_VERSION) {
-        handleLogout();
-        return;
-      }
-
       const { isValid } = await validateUser(authPassword);
       if (!isValid) {
         handleLogout();
-        alert("ACESSO REVOGADO: Sua licença não é mais válida neste terminal.");
+        alert("Sessão expirada ou acesso revogado.");
       }
-      
-      setTimeout(() => setIsVerifying(false), 3000);
+      setTimeout(() => setIsVerifying(false), 2000);
     };
 
-    performStrictValidation();
     const timer = setInterval(performStrictValidation, SECURITY_CHECK_INTERVAL);
     return () => clearInterval(timer);
-  }, [isLoggedIn, authPassword, handleLogout, validateUser]);
+  }, [view, authPassword, handleLogout, validateUser]);
 
   const handleLogin = async (pass: string) => {
     setIsVerifying(true);
@@ -90,29 +90,30 @@ const App: React.FC = () => {
       const finalName = name || 'Trader';
       setAuthPassword(pass);
       setUserName(finalName);
-      setIsLoggedIn(true);
+      setView('DASHBOARD');
       sessionStorage.setItem('ultra_trade_session', pass);
       sessionStorage.setItem('ultra_trade_user', finalName);
       sessionStorage.setItem('ultra_v', SECURITY_VERSION);
     } else {
-      throw new Error("Acesso negado");
+      throw new Error("Credenciais inválidas.");
     }
-    setTimeout(() => setIsVerifying(false), 1500);
+    setTimeout(() => setIsVerifying(false), 1000);
   };
 
-  if (isLoggedIn) {
+  const handleRegisterSuccess = (pass: string) => {
+    setView('SUCCESS');
+  };
+
+  if (view === 'DASHBOARD') {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        {/* Indicador de Segurança */}
-        <div className="fixed top-2 md:top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
           <div className={`flex items-center gap-3 px-6 py-2 rounded-full border backdrop-blur-2xl shadow-2xl transition-all duration-1000 ${
-            isVerifying 
-            ? 'bg-blue-600/20 border-blue-400/50 scale-100' 
-            : 'bg-emerald-600/10 border-emerald-400/20 scale-95 opacity-50'
+            isVerifying ? 'bg-blue-600/20 border-blue-400/50 opacity-100' : 'bg-emerald-600/10 border-emerald-400/20 opacity-50'
           }`}>
             <div className={`h-2 w-2 rounded-full ${isVerifying ? 'bg-blue-400 animate-ping' : 'bg-emerald-400'}`}></div>
             <span className="text-[9px] font-black uppercase tracking-widest text-white">
-              {isVerifying ? 'Sincronizando Segurança...' : 'Licença Ativa'}
+              {isVerifying ? 'Autenticando...' : 'Conectado'}
             </span>
           </div>
         </div>
@@ -121,7 +122,15 @@ const App: React.FC = () => {
     );
   }
 
-  return <Login onLogin={handleLogin} />;
+  if (view === 'REGISTER') {
+    return <Register onSuccess={handleRegisterSuccess} onBackToLogin={() => setView('LOGIN')} />;
+  }
+
+  if (view === 'SUCCESS') {
+    return <Success onGoToLogin={() => setView('LOGIN')} />;
+  }
+
+  return <Login onLogin={handleLogin} onGoToRegister={() => setView('REGISTER')} />;
 };
 
 export default App;
