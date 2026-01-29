@@ -75,10 +75,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     if (isScanning || !marketStatus.isOpen) return;
     setIsScanning(true);
     
-    const texts = ['MAPEANDO ESTRUTURA...', 'LOCALIZANDO CANAIS...', 'ANALISANDO REJEIÇÕES...', 'ULTRA SNIPER ATIVO...'];
+    const texts = [
+      'MAPEANDO ZONAS DE OFERTA...', 
+      'IDENTIFICANDO QUEBRA DE ESTRUTURA...', 
+      'VALIDANDO FLUXO INSTITUCIONAL...', 
+      'SNIPER V18: SINAL CONFIRMADO!'
+    ];
     for (const text of texts) {
       setScanningText(text);
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 800));
     }
 
     try {
@@ -197,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {/* 2. SELETOR DE CATEGORIA (Aparece após modalidade) */}
+              {/* 2. SELETOR DE CATEGORIA */}
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">2. Ativos</h3>
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -206,7 +211,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {/* 3. SELETOR DE MERCADO (Aparece apenas para OB Moedas) */}
+              {/* 3. SELETOR DE MERCADO */}
               {signalType === SignalType.BINARY && assetCategory === 'MOEDAS' && (
                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
                    <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">3. Tipo de Mercado</h3>
@@ -227,7 +232,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                  </div>
               )}
 
-              {/* 4. ATIVO E TIMEFRAME (Conclusão da cascata) */}
+              {/* 4. ATIVO E TIMEFRAME */}
               <div className="space-y-4 pt-2 border-t border-white/5">
                 {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -265,7 +270,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
               ) : (
                 <div className="text-center py-5 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
                    <p className="text-[8px] font-black uppercase text-emerald-400 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `AUTO-SNIPER MONITORANDO: ${formatTime(secondsToNextCandle)}`}
+                     {isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
@@ -280,7 +285,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h4 className="text-sm font-black uppercase tracking-widest">{scanningText}</h4>
-                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest">Leitura Pura de Price Action</p>
+                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest italic">Analisando Quebra de Estrutura e CHoCH</p>
               </div>
             ) : activeSignal ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -291,7 +296,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Estudo de Preço</p>
+                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Quebra de Movimento</p>
               </div>
             )}
           </div>

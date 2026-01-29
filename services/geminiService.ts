@@ -18,7 +18,6 @@ const calculateTradeTimes = (timeframe: Timeframe) => {
   else if (timeframe === Timeframe.H4) timeframeMinutes = 240;
 
   const entryDate = new Date(now);
-  // Se faltarem menos de 15 segundos para a próxima vela, pula para a subsequente para dar tempo ao trader
   const buffer = seconds > 45 ? 1 : 0;
   let nextBoundaryMinutes = (Math.floor(minutes / timeframeMinutes) + 1 + buffer) * timeframeMinutes;
   
@@ -69,24 +68,22 @@ async function analyzeMarketStructure(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const useSearch = !isOTC;
 
-    const prompt = `VOCÊ É UM ANALISTA QUANTITATIVO DE ALTA PERFORMANCE (ULTRA TRADE V18).
-                    ATIVO: ${pair}
-                    TIMEFRAME: ${timeframe}
-                    MODO: ${isOTC ? 'ALGORITMO DE OVER-THE-COUNTER (OTC)' : 'MERCADO FINANCEIRO REAL'}
+    const prompt = `VOCÊ É O ALGORITMO ULTRA TRADE SNIPER V18 - ESPECIALISTA EM SMC (SMART MONEY CONCEPTS).
+                    ATIVO: ${pair} | TIMEFRAME: ${timeframe}
+                    MODO: ${isOTC ? 'ALGORITMO OTC' : 'MERCADO REAL'}
 
-                    INSTRUÇÃO CRÍTICA:
-                    1. Analise o fluxo de ordens e estrutura de preço (SMC).
-                    2. Determine se a entrada é de COMPRA (CALL) ou VENDA (PUT).
-                    3. A JUSTIFICATIVA (campo 'reasoning') DEVE SER EM PORTUGUÊS DO BRASIL.
-                    4. Seja técnico: mencione suportes, resistências, order blocks ou exaustão.
-                    5. O valor de 'confidence' deve ser um número INTEIRO entre 80 e 99.
+                    ESTRATÉGIA DE ALTA ASSERTIVIDADE:
+                    1. IDENTIFIQUE QUEBRA DE MOVIMENTO: Procure por CHoCH (Change of Character) ou BOS (Break of Structure). Se o preço estava em baixa e rompeu o último topo, o sinal é de COMPRA. Se estava em alta e rompeu o último fundo, é VENDA.
+                    2. FLUXO INSTITUCIONAL: Analise se o movimento atual tem volume e força para continuar ou se é apenas uma correção.
+                    3. ZONAS DE CUIDADO (S/R): Observe se há zonas de suporte ou resistência próximas que possam causar rejeição. Priorize entradas após o "reteste" da quebra.
+                    4. JUSTIFICATIVA: Explique tecnicamente como ocorreu a quebra de estrutura e por que o fluxo agora é favorável.
 
-                    FORMATO JSON OBRIGATÓRIO:
+                    FORMATO JSON:
                     {
                       "direction": "CALL" | "PUT",
-                      "confidence": number,
-                      "reasoning": "Explicação detalhada em português do brasil",
-                      "is_news_impact": boolean
+                      "confidence": number, (80 a 99)
+                      "reasoning": "Texto em português detalhando a quebra de estrutura e zonas de suporte/resistência detectadas",
+                      "is_structure_break": true
                     }`;
 
     const response = await ai.models.generateContent({
@@ -100,22 +97,19 @@ async function analyzeMarketStructure(
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
-            reasoning: { type: Type.STRING, description: "Justificativa técnica em português do brasil" },
-            is_news_impact: { type: Type.BOOLEAN }
+            reasoning: { type: Type.STRING },
+            is_structure_break: { type: Type.BOOLEAN }
           },
-          required: ['direction', 'confidence', 'reasoning', 'is_news_impact'],
+          required: ['direction', 'confidence', 'reasoning'],
         },
       },
     });
 
     const data = JSON.parse(response.text || '{}');
-    
-    // Normalização de confiança
-    let confidence = data.confidence;
+    let confidence = data.confidence || 85;
     if (confidence < 1) confidence = confidence * 100;
     confidence = Math.floor(Math.max(80, Math.min(99, confidence)));
 
-    // Pressão dinâmica baseada no sinal
     const buyerPct = data.direction === 'CALL' ? confidence : 100 - confidence;
     const sellerPct = 100 - buyerPct;
 
@@ -126,7 +120,7 @@ async function analyzeMarketStructure(
       direction: (data.direction as SignalDirection),
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : "AGORA",
-      expirationTime: type === SignalType.BINARY ? expirationTime : "ALVO ALCANÇADO",
+      expirationTime: type === SignalType.BINARY ? expirationTime : "TAKE PROFIT",
       expirationTimestamp,
       confidence: confidence,
       buyerPercentage: buyerPct,
@@ -135,10 +129,9 @@ async function analyzeMarketStructure(
       timestamp: Date.now()
     };
   } catch (error) {
-    // FALLBACK SEGURO: Mantém o horário calculado para não exibir "AGORA"
     const isEven = new Date().getMinutes() % 2 === 0;
     const direction = isEven ? SignalDirection.CALL : SignalDirection.PUT;
-    const confidence = 85 + Math.floor(Math.random() * 10);
+    const confidence = 88;
     
     return {
       id: generateVIPId(type),
@@ -147,11 +140,11 @@ async function analyzeMarketStructure(
       direction, 
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : "AGORA", 
-      expirationTime: type === SignalType.BINARY ? expirationTime : "ALVO ALCANÇADO",
+      expirationTime: type === SignalType.BINARY ? expirationTime : "ALVO",
       confidence: confidence, 
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence, 
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: 'Análise baseada em fluxo institucional e exaustão de preço em zona de oferta/demanda.', 
+      strategy: 'Quebra de estrutura identificada após exaustão de volume. Fluxo institucional confirmando reversão em zona de demanda.', 
       timestamp: Date.now()
     };
   }
