@@ -23,7 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [assetCategory, setAssetCategory] = useState<'MOEDAS' | 'CRYPTO'>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
-  const [isAutoMode, setIsAutoMode] = useState(true); // NOVO: Estado do Toggle
+  const [isAutoMode, setIsAutoMode] = useState(true);
   
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -46,9 +46,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       return isWeekend ? { isOpen: false, label: 'FECHADO (FX)', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
     }
 
-    // REGRA DE OURO: 
-    // Real: Seg-Sex 04:00 às 15:30
-    // OTC: 15:31 às 03:59 e Finais de Semana
     const isOBWeekend = (day === 6 || day === 0);
     const isWeekdayRealTime = !isOBWeekend && timeValue >= 240 && timeValue < 930;
     
@@ -88,7 +85,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
     try {
       if (signalType === SignalType.BINARY) {
-        // No modo manual (Toggle OFF), podemos escolher o par ou usar o scanner
         const signal = isAutoMode 
           ? await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY)
           : await generateSignal(selectedPair, selectedTimeframe, marketStatus.isOTC, SignalType.BINARY);
@@ -125,7 +121,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       
       setSecondsToNextCandle(tfSeconds);
       
-      // Lógica Automática: Só dispara se isAutoMode for TRUE
       if (signalType === SignalType.BINARY && isAutoMode) {
         if (tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
           autoTriggeredRef.current = currentBoundary;
@@ -183,7 +178,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
               <div className="flex items-center justify-between">
                 <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Ultra Trade Sniper</h3>
                 
-                {/* NOVO: Toggle Modo Automático/Manual */}
                 {signalType === SignalType.BINARY && (
                   <div className="flex items-center gap-2">
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Automático</span>
@@ -208,7 +202,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                   <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>FOREX/CRY</button>
                 </div>
 
-                {/* Mostra seletor de par se estiver no modo manual de OB ou em Forex */}
                 {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) && (
                   <select 
                     value={selectedPair} 
@@ -226,7 +219,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {/* Lógica de Botão: Aparece se for Forex OU se for OB Manual */}
               {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) ? (
                 <button 
                   onClick={triggerSignalGeneration} 
@@ -272,7 +264,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       </main>
 
       <footer className="py-4 text-center border-t border-white/5 mt-auto bg-black/20">
-        <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">Ultra Trade {SECURITY_VERSION} Global Terminal</p>
+        <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] text-slate-700">Ultra Trade {SECURITY_VERSION} Terminal Global</p>
       </footer>
     </div>
   );

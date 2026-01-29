@@ -68,19 +68,23 @@ async function analyzeMarketStructure(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const useSearch = !isOTC;
 
-    const prompt = `SISTEMA QUANTITATIVO ULTRA TRADE V18
+    const prompt = `VOCÊ É UM ANALISTA QUANTITATIVO DE ALTA PERFORMANCE (ULTRA TRADE V18).
                     ATIVO: ${pair}
                     TIMEFRAME: ${timeframe}
-                    MODO: ${isOTC ? 'OTC' : 'REAL'}
+                    MODO: ${isOTC ? 'ALGORITMO DE OVER-THE-COUNTER (OTC)' : 'MERCADO FINANCEIRO REAL'}
 
-                    INSTRUÇÃO: Analise o gráfico atual e determine a direção.
-                    IMPORTANTE: O valor de 'confidence' deve ser um número INTEIRO entre 80 e 98 (ex: 88, não 0.88).
-                    
-                    JSON FORMAT:
+                    INSTRUÇÃO CRÍTICA:
+                    1. Analise o fluxo de ordens e estrutura de preço (SMC).
+                    2. Determine se a entrada é de COMPRA (CALL) ou VENDA (PUT).
+                    3. A JUSTIFICATIVA (campo 'reasoning') DEVE SER EM PORTUGUÊS DO BRASIL.
+                    4. Seja técnico: mencione suportes, resistências, order blocks ou exaustão.
+                    5. O valor de 'confidence' deve ser um número INTEIRO entre 80 e 99.
+
+                    FORMATO JSON OBRIGATÓRIO:
                     {
                       "direction": "CALL" | "PUT",
                       "confidence": number,
-                      "reasoning": "string",
+                      "reasoning": "Explicação detalhada em português do brasil",
                       "is_news_impact": boolean
                     }`;
 
@@ -95,7 +99,7 @@ async function analyzeMarketStructure(
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
-            reasoning: { type: Type.STRING },
+            reasoning: { type: Type.STRING, description: "Justificativa técnica em português do brasil" },
             is_news_impact: { type: Type.BOOLEAN }
           },
           required: ['direction', 'confidence', 'reasoning', 'is_news_impact'],
@@ -105,16 +109,13 @@ async function analyzeMarketStructure(
 
     const data = JSON.parse(response.text || '{}');
     
-    // Garantir que a confiança seja um número inteiro e nunca menor que 80
+    // Normalização de confiança
     let confidence = data.confidence;
     if (confidence < 1) confidence = confidence * 100;
     confidence = Math.floor(Math.max(80, Math.min(99, confidence)));
 
-    // Cálculo de pressão: Se CALL, comprador é alto. Se PUT, vendedor é alto.
-    const buyerPct = data.direction === 'CALL' 
-      ? confidence 
-      : 100 - confidence;
-
+    // Pressão dinâmica
+    const buyerPct = data.direction === 'CALL' ? confidence : 100 - confidence;
     const sellerPct = 100 - buyerPct;
 
     return {
@@ -124,12 +125,12 @@ async function analyzeMarketStructure(
       direction: (data.direction as SignalDirection),
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : "AGORA",
-      expirationTime: type === SignalType.BINARY ? expirationTime : "TARGET",
+      expirationTime: type === SignalType.BINARY ? expirationTime : "ALVO ALCANÇADO",
       expirationTimestamp,
       confidence: confidence,
       buyerPercentage: buyerPct,
       sellerPercentage: sellerPct,
-      strategy: data.is_news_impact ? `[ALERTA VOLATILIDADE] ${data.reasoning}` : data.reasoning,
+      strategy: data.reasoning,
       timestamp: Date.now()
     };
   } catch (error) {
@@ -139,10 +140,10 @@ async function analyzeMarketStructure(
       id: generateVIPId(type),
       pair, type, direction, timeframe,
       entryTime: "AGORA", 
-      confidence: 88, 
-      buyerPercentage: direction === SignalDirection.CALL ? 88 : 12, 
-      sellerPercentage: direction === SignalDirection.PUT ? 88 : 12,
-      strategy: 'Análise técnica de fluxo baseada em rejeição de preço.', 
+      confidence: 85, 
+      buyerPercentage: direction === SignalDirection.CALL ? 85 : 15, 
+      sellerPercentage: direction === SignalDirection.PUT ? 85 : 15,
+      strategy: 'Análise baseada em fluxo institucional e rejeição de preço em zona de oferta.', 
       timestamp: Date.now()
     };
   }

@@ -54,7 +54,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
         </div>
 
-        <div className={`flex flex-col items-center justify-center py-6 rounded-3xl mb-5 shadow-inner transition-all hover:brightness-110 active:scale-[0.98] cursor-default ${isCall ? 'signal-call animate-flash-call' : 'signal-put animate-flash-put'}`}>
+        <div className={`flex flex-col items-center justify-center py-8 rounded-3xl mb-5 shadow-inner transition-all hover:brightness-110 active:scale-[0.98] cursor-default ${isCall ? 'signal-call animate-flash-call' : 'signal-put animate-flash-put'}`}>
           <div className="flex items-center gap-4">
             {isCall ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,11 +66,8 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
               </svg>
             )}
             <div className="flex flex-col">
-              <span className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase leading-none">
+              <span className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none">
                 {isCall ? 'COMPRAR' : 'VENDER'}
-              </span>
-              <span className="text-[10px] font-bold text-white/70 uppercase tracking-[0.2em] mt-1">
-                {isCall ? 'ALTA CONFIRMAÇÃO' : 'BAIXA CONFIRMAÇÃO'}
               </span>
             </div>
           </div>
