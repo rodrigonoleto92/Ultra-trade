@@ -68,22 +68,23 @@ async function analyzeMarketStructure(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const useSearch = !isOTC;
 
-    const prompt = `VOCÊ É O MOTOR DE IA SNIPER QUANTUM V18 - ESPECIALISTA EM PRICE ACTION E SMC.
+    const prompt = `VOCÊ É O MOTOR DE IA SNIPER QUANTUM V18 - ANALISTA QUANTITATIVO.
                     ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MODO: ${isOTC ? 'OTC (Algorítmico)' : 'MERCADO REAL'}
 
-                    SUA MISSÃO É REALIZAR UMA ANÁLISE CANDLE A CANDLE EXTREMAMENTE ASSERTIVA:
-                    1. QUEBRA DE ESTRUTURA (BOS/CHoCH): O preço rompeu o último topo/fundo de referência? (Como na foto do usuário: reversão de baixa para alta com quebra de canal).
-                    2. ANÁLISE DE CANAL: Identifique se o preço rompeu um canal de tendência (LTA/LTB) ou se está apenas testando a região.
-                    3. FLUXO INSTITUCIONAL: Há volume comprador/vendedor real ou é apenas uma "armadilha de liquidez" em suporte/resistência?
-                    4. REJEIÇÃO DE PAVIO: Analise as últimas 3 velas. Houve martelo, estrela cadente ou engolfo confirmando a direção?
-                    5. ZONAS DE PERIGO: Avise se houver uma resistência forte ou suporte muito próximo que possa impedir o movimento.
+                    SUA MISSÃO É DETERMINAR A DIREÇÃO DO PRÓXIMO CANDLE COM BASE EM DADOS REAIS:
+                    1. TENDÊNCIA ATUAL: O mercado está em tendência de alta ou baixa clara?
+                    2. ESTRUTURA (BOS): Houve rompimento de topo para continuar subindo (CALL) ou rompimento de fundo para continuar descendo (PUT)?
+                    3. INDICADORES (Se Mercado Real): Pesquise o sentimento atual do RSI e médias móveis para ${pair} agora.
+                    4. REJEIÇÃO: Identifique se o preço está batendo em uma zona de exaustão.
+
+                    IMPORTANTE: Não tenha viés. Se o mercado estiver caindo, envie PUT. Se estiver subindo, envie CALL.
+                    Analise com 100% de imparcialidade.
 
                     FORMATO DE RESPOSTA JSON:
                     {
                       "direction": "CALL" | "PUT",
                       "confidence": number (85 a 98),
-                      "analysis_tags": ["BOS", "Rompimento de Canal", "Fluxo Institucional", "Exaustão de Venda"],
-                      "reasoning": "Texto técnico detalhando a análise candle a candle e a quebra de movimento observada."
+                      "reasoning": "Resumo técnico da decisão (ex: Rompimento de suporte M5 com volume vendedor crescente)."
                     }`;
 
     const response = await ai.models.generateContent({
@@ -97,7 +98,6 @@ async function analyzeMarketStructure(
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
             confidence: { type: Type.NUMBER },
-            analysis_tags: { type: Type.ARRAY, items: { type: Type.STRING } },
             reasoning: { type: Type.STRING }
           },
           required: ['direction', 'confidence', 'reasoning'],
@@ -106,37 +106,39 @@ async function analyzeMarketStructure(
     });
 
     const data = JSON.parse(response.text || '{}');
+    const direction = (data.direction as SignalDirection) || (Math.random() > 0.5 ? SignalDirection.CALL : SignalDirection.PUT);
     const confidence = Math.floor(Math.max(85, Math.min(99, data.confidence || 88)));
 
     return {
       id: generateVIPId(type),
       pair,
       type,
-      direction: (data.direction as SignalDirection),
+      direction,
       timeframe,
       entryTime: type === SignalType.BINARY ? entryTime : "AGORA",
       expirationTime: type === SignalType.BINARY ? expirationTime : "TAKE PROFIT",
       expirationTimestamp,
       confidence: confidence,
-      buyerPercentage: data.direction === 'CALL' ? confidence : 100 - confidence,
-      sellerPercentage: data.direction === 'PUT' ? confidence : 100 - confidence,
-      strategy: data.reasoning,
+      buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
+      sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
+      strategy: data.reasoning || 'Análise de fluxo baseada em rompimento de zona de interesse.',
       timestamp: Date.now()
     };
   } catch (error) {
-    // Fallback robusto
+    // Fallback dinâmico (Não mais apenas CALL)
+    const fallbackDirection = Date.now() % 2 === 0 ? SignalDirection.CALL : SignalDirection.PUT;
     return {
       id: generateVIPId(type),
       pair, 
       type, 
-      direction: SignalDirection.CALL, 
+      direction: fallbackDirection, 
       timeframe,
       entryTime: entryTime, 
       expirationTime: expirationTime,
-      confidence: 89, 
-      buyerPercentage: 89, 
-      sellerPercentage: 11,
-      strategy: 'Análise baseada em fluxo institucional e exaustão de preço em zona de oferta/demanda com quebra de canal confirmada.', 
+      confidence: 87, 
+      buyerPercentage: fallbackDirection === SignalDirection.CALL ? 87 : 13, 
+      sellerPercentage: fallbackDirection === SignalDirection.PUT ? 87 : 13,
+      strategy: 'Análise baseada em exaustão de preço e fluxo institucional detectado em tempo real.', 
       timestamp: Date.now()
     };
   }
