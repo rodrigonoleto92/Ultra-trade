@@ -22,6 +22,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [selectedTimeframe, setSelectedTimeframe] = useState(Timeframe.M1);
   const [assetCategory, setAssetCategory] = useState<'MOEDAS' | 'CRYPTO'>('MOEDAS');
   const [signalType, setSignalType] = useState<SignalType>(SignalType.BINARY);
+  const [marketPreference, setMarketPreference] = useState<'REAL' | 'OTC'>('REAL');
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
   const [isAutoMode, setIsAutoMode] = useState(true);
   
@@ -47,24 +48,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     }
 
     const isOBWeekend = (day === 6 || day === 0);
-    const isWeekdayRealTime = !isOBWeekend && timeValue >= 240 && timeValue < 930;
-    
-    if (isOBWeekend) return { isOpen: true, isOTC: true, label: 'MERCADO OTC' };
-    return isWeekdayRealTime 
-      ? { isOpen: true, isOTC: false, label: 'MERCADO REAL' }
-      : { isOpen: true, isOTC: true, label: 'MERCADO OTC' };
-  }, [assetCategory, signalType, Math.floor(Date.now() / 60000)]);
+    return { 
+      isOpen: true, 
+      isOTC: marketPreference === 'OTC', 
+      label: marketPreference === 'OTC' ? 'MERCADO OTC (VIP)' : 'MERCADO REAL' 
+    };
+  }, [assetCategory, signalType, marketPreference, Math.floor(Date.now() / 60000)]);
 
   const currentPairsList = useMemo(() => {
-    let baseList = assetCategory === 'CRYPTO' 
-      ? CRYPTO_PAIRS 
-      : (signalType === SignalType.BINARY && marketStatus.isOTC ? OTC_PAIRS : FOREX_PAIRS);
-    
+    if (assetCategory === 'CRYPTO') return CRYPTO_PAIRS;
     if (signalType === SignalType.BINARY) {
+      const baseList = marketPreference === 'OTC' ? OTC_PAIRS : FOREX_PAIRS;
       return baseList.filter(p => p.symbol !== 'XAU/USD');
     }
-    return baseList;
-  }, [assetCategory, signalType, marketStatus.isOTC]);
+    return FOREX_PAIRS;
+  }, [assetCategory, signalType, marketPreference]);
 
   useEffect(() => {
     const validPair = currentPairsList.find(p => p.symbol === selectedPair);
@@ -84,13 +82,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     }
 
     try {
+      const isOTC = assetCategory === 'MOEDAS' && signalType === SignalType.BINARY && marketPreference === 'OTC';
+      
       if (signalType === SignalType.BINARY) {
         const signal = isAutoMode 
           ? await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY)
-          : await generateSignal(selectedPair, selectedTimeframe, marketStatus.isOTC, SignalType.BINARY);
+          : await generateSignal(selectedPair, selectedTimeframe, isOTC, SignalType.BINARY);
         setActiveSignal(signal);
       } else {
-        const signal = await generateSignal(selectedPair, selectedTimeframe, marketStatus.isOTC, signalType);
+        const signal = await generateSignal(selectedPair, selectedTimeframe, false, signalType);
         setActiveSignal(signal);
       }
     } catch (err) {
@@ -126,7 +126,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
           autoTriggeredRef.current = currentBoundary;
           triggerSignalGeneration();
         }
-        
         if (tfSeconds === 40 && activeSignal && !isScanning) {
           setActiveSignal(null);
         }
@@ -166,71 +165,107 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
       <main className="flex-1 flex flex-col items-center p-3 md:p-6 space-y-4 md:space-y-6 max-w-6xl mx-auto w-full">
         <div className="w-full flex justify-center">
-           <div className={`px-4 py-1.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${marketStatus.isOpen ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-rose-500/20 text-rose-400 bg-rose-500/5'}`}>
-             <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${marketStatus.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+           <div className={`px-4 py-1.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${marketStatus.label.includes('OTC') ? 'border-amber-500/20 text-amber-400 bg-amber-500/5' : 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'}`}>
+             <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${marketStatus.label.includes('OTC') ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
              {marketStatus.label}
            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 w-full">
           <div className="lg:col-span-5 space-y-4">
-            <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Ultra Trade Sniper</h3>
-                
-                {signalType === SignalType.BINARY && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Automático</span>
-                    <button 
-                      onClick={() => setIsAutoMode(!isAutoMode)}
-                      className={`w-10 h-5 rounded-full transition-colors relative flex items-center px-1 ${isAutoMode ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                    >
-                      <div className={`h-3 w-3 bg-white rounded-full transition-transform ${isAutoMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-6">
               
-              <div className="space-y-4">
+              {/* 1. SELETOR DE MODALIDADE (O Filtro Principal) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">1. Modalidade</h3>
+                  {signalType === SignalType.BINARY && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">Auto</span>
+                      <button 
+                        onClick={() => setIsAutoMode(!isAutoMode)}
+                        className={`w-8 h-4 rounded-full transition-colors relative flex items-center px-1 ${isAutoMode ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                      >
+                        <div className={`h-2.5 w-2.5 bg-white rounded-full transition-transform ${isAutoMode ? 'translate-x-3.5' : 'translate-x-0'}`}></div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+                  <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-600'}`}>OB (BINÁRIAS)</button>
+                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950 shadow-lg shadow-blue-500/20' : 'text-slate-600'}`}>FOREX / CRIPTO</button>
+                </div>
+              </div>
+
+              {/* 2. SELETOR DE CATEGORIA (Aparece após modalidade) */}
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">2. Ativos</h3>
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                   <button onClick={() => setAssetCategory('MOEDAS')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'MOEDAS' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>MOEDAS</button>
-                  <button onClick={() => setAssetCategory('CRYPTO')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'CRYPTO' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>CRYPTO</button>
-                </div>
-
-                <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
-                  <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>OB (BINÁRIAS)</button>
-                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950' : 'text-slate-600'}`}>FOREX/CRY</button>
-                </div>
-
-                {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) && (
-                  <select 
-                    value={selectedPair} 
-                    onChange={(e) => setSelectedPair(e.target.value)}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-bold text-white outline-none"
-                  >
-                    {currentPairsList.map(p => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
-                  </select>
-                )}
-
-                <div className="grid grid-cols-3 gap-2">
-                  {(signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES).map(tf => (
-                    <button key={tf.value} onClick={() => setSelectedTimeframe(tf.value)} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${selectedTimeframe === tf.value ? 'bg-white text-slate-950 border-white' : 'bg-slate-900/50 text-slate-600 border-white/5'}`}>{tf.label}</button>
-                  ))}
+                  <button onClick={() => setAssetCategory('CRYPTO')} className={`flex-1 py-2 rounded-lg text-[9px] font-black transition-all ${assetCategory === 'CRYPTO' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>CRYPTO / OUTROS</button>
                 </div>
               </div>
 
+              {/* 3. SELETOR DE MERCADO (Aparece apenas para OB Moedas) */}
+              {signalType === SignalType.BINARY && assetCategory === 'MOEDAS' && (
+                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                   <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">3. Tipo de Mercado</h3>
+                   <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+                     <button 
+                       onClick={() => setMarketPreference('REAL')} 
+                       className={`flex-1 py-2 rounded-lg text-[8px] font-black transition-all border ${marketPreference === 'REAL' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600'}`}
+                     >
+                       MERCADO REAL
+                     </button>
+                     <button 
+                       onClick={() => setMarketPreference('OTC')} 
+                       className={`flex-1 py-2 rounded-lg text-[8px] font-black transition-all border ${marketPreference === 'OTC' ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'border-transparent text-slate-600'}`}
+                     >
+                       MERCADO OTC
+                     </button>
+                   </div>
+                 </div>
+              )}
+
+              {/* 4. ATIVO E TIMEFRAME (Conclusão da cascata) */}
+              <div className="space-y-4 pt-2 border-t border-white/5">
+                {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Ativo Selecionado</h3>
+                    <select 
+                      value={selectedPair} 
+                      onChange={(e) => setSelectedPair(e.target.value)}
+                      className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-bold text-white outline-none focus:border-blue-500/50 transition-colors"
+                    >
+                      {currentPairsList.map(p => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Timeframe (Vela)</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(signalType === SignalType.BINARY ? BINARY_TIMEFRAMES : FOREX_TIMEFRAMES).map(tf => (
+                      <button key={tf.value} onClick={() => setSelectedTimeframe(tf.value)} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${selectedTimeframe === tf.value ? 'bg-white text-slate-950 border-white' : 'bg-slate-900/50 text-slate-600 border-white/5'}`}>{tf.label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* BOTÃO DE AÇÃO */}
               {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) ? (
                 <button 
                   onClick={triggerSignalGeneration} 
                   disabled={isScanning || !marketStatus.isOpen}
-                  className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-blue-500/20"
+                  className="w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50 shadow-xl shadow-blue-500/20 group overflow-hidden relative"
                 >
-                  {isScanning ? scanningText : 'GERAR ANÁLISE ULTRA'}
+                  <span className="relative z-10">{isScanning ? scanningText : 'GERAR ANÁLISE ULTRA'}</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 </button>
               ) : (
-                <div className="text-center py-4 bg-slate-900/30 rounded-xl border border-white/5">
-                   <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `CICLO AUTO-SNIPER EM ${formatTime(secondsToNextCandle)}`}
+                <div className="text-center py-5 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                   <p className="text-[8px] font-black uppercase text-emerald-400 tracking-widest animate-pulse">
+                     {isScanning ? scanningText : `AUTO-SNIPER MONITORANDO: ${formatTime(secondsToNextCandle)}`}
                    </p>
                 </div>
               )}
