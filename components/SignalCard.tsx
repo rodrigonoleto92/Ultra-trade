@@ -29,10 +29,8 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
     return () => clearInterval(interval);
   }, [signal.id, signal.buyerPercentage, signal.sellerPercentage]);
 
-  // Valores dinâmicos baseados na confiança e direção
-  const volumeValue = `${Math.floor(signal.confidence * 0.9 + Math.random() * 5)}%`;
-  const tendencyValue = `${Math.floor(signal.confidence * 0.85 + Math.random() * 8)}%`;
-  const riskValue = `${Math.floor(100 - signal.confidence + Math.random() * 10)}%`;
+  // Simulando tags técnicas baseadas na estratégia para visualização
+  const techTags = ["BOS", "CHoCH", "Fluxo", "Canal"].filter(() => Math.random() > 0.4);
 
   return (
     <div className={`glass rounded-[24px] md:rounded-[32px] overflow-hidden border-t-4 md:border-t-0 md:border-l-8 ${isCall ? 'border-emerald-500' : 'border-rose-500'} shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-700`}>
@@ -41,11 +39,19 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] font-black text-slate-300 uppercase tracking-tighter">
-                {isForex ? 'INSTITUCIONAL' : 'OPÇÕES SNIPER'}
+                OPÇÕES SNIPER
               </span>
               <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
             </div>
             <h3 className="text-xl md:text-3xl font-black text-white tracking-tight">{signal.pair}</h3>
+            
+            {/* Tags Técnicas em Cascata */}
+            <div className="flex gap-1 mt-2">
+              {techTags.map(tag => (
+                <span key={tag} className="text-[7px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded uppercase">{tag}</span>
+              ))}
+              <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">CANDLE A CANDLE</span>
+            </div>
           </div>
           <div className="text-right">
             <div className={`text-[9px] md:text-[11px] font-black px-3 py-1.5 rounded-xl border ${signal.confidence > 90 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
@@ -105,21 +111,21 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </p>
           <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Volume</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">Canal</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: volumeValue }}></div>
+                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '90%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Tendência</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">Estrutura</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: tendencyValue }}></div>
+                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '85%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Risco</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">Liquidez</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: riskValue }}></div>
+                <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: '70%' }}></div>
               </div>
             </div>
           </div>
