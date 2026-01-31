@@ -2,7 +2,7 @@
 import { CurrencyPair, MarketType, Timeframe } from './types';
 
 // CONTROLE DE SEGURANÇA GLOBAL
-export const SECURITY_VERSION = 'v12.1.2'; 
+export const SECURITY_VERSION = 'v12.1.3'; 
 
 export const FOREX_PAIRS: CurrencyPair[] = [
   { symbol: 'XAU/USD', type: MarketType.FOREX },
@@ -23,6 +23,18 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'AUD/USD (OTC)', type: MarketType.OTC },
   { symbol: 'USD/CHF (OTC)', type: MarketType.OTC },
   { symbol: 'EUR/GBP (OTC)', type: MarketType.OTC },
+  { symbol: 'XAU/USD (OTC)', type: MarketType.OTC },
+  { symbol: 'US500 (OTC)', type: MarketType.OTC },
+  { symbol: 'Tesla (OTC)', type: MarketType.OTC },
+  { symbol: 'Apple (OTC)', type: MarketType.OTC },
+  { symbol: 'Netflix (OTC)', type: MarketType.OTC },
+  { symbol: 'Amazon (OTC)', type: MarketType.OTC },
+  { symbol: 'Intel (OTC)', type: MarketType.OTC },
+  { symbol: 'McDonald\'s (OTC)', type: MarketType.OTC },
+  { symbol: 'Meta (OTC)', type: MarketType.OTC },
+  { symbol: 'JP Morgan (OTC)', type: MarketType.OTC },
+  { symbol: 'Nike (OTC)', type: MarketType.OTC },
+  { symbol: 'Google (OTC)', type: MarketType.OTC },
 ];
 
 export const CRYPTO_PAIRS: CurrencyPair[] = [
