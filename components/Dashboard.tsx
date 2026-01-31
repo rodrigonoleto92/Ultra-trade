@@ -241,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                        onClick={() => setMarketPreference('REAL')} 
                        className={`flex-1 py-2 rounded-lg text-[8px] font-black transition-all border ${marketPreference === 'REAL' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600'}`}
                      >
-                       MERCADO REAL {(new Date().getDay() === 0 || new Date().getDay() === 6) && '(FECHADO)'}
+                       MERCADO REAL
                      </button>
                      <button 
                        onClick={() => setMarketPreference('OTC')} 
