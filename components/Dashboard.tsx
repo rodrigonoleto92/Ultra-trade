@@ -33,27 +33,48 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   
   const autoTriggeredRef = useRef<number | null>(null);
 
+  // Lógica de status de mercado atualizada para respeitar finais de semana
   const marketStatus = useMemo(() => {
     const now = new Date();
-    const day = now.getDay(); 
+    const day = now.getDay(); // 0 = Domingo, 6 = Sábado
     const hour = now.getHours();
     const minutes = now.getMinutes();
     const timeValue = hour * 60 + minutes;
 
-    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO)', isOTC: false };
+    const isWeekend = (day === 6) || (day === 0);
+
+    // Crypto sempre aberto
+    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO) - ABERTO', isOTC: false };
     
+    // Forex fecha nos finais de semana
     if (signalType === SignalType.FOREX) {
-      const isWeekend = (day === 6) || (day === 0) || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
-      return isWeekend ? { isOpen: false, label: 'FECHADO (FX)', isOTC: false } : { isOpen: true, label: 'REAL (FOREX)', isOTC: false };
+      // Forex fecha Sexta 18:00 (1080 min) e abre Domingo 18:00 (1080 min)
+      // Simplificado: Sábado e Domingo está fechado.
+      const isForexWeekend = isWeekend || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
+      return isForexWeekend ? { isOpen: false, label: 'FECHADO (FOREX REAL)', isOTC: false } : { isOpen: true, label: 'REAL (FOREX) - ABERTO', isOTC: false };
     }
 
-    const isOBWeekend = (day === 6 || day === 0);
-    return { 
-      isOpen: true, 
-      isOTC: marketPreference === 'OTC', 
-      label: marketPreference === 'OTC' ? 'MERCADO OTC (VIP)' : 'MERCADO REAL' 
-    };
+    // Opções Binárias
+    if (marketPreference === 'OTC') {
+      return { isOpen: true, isOTC: true, label: 'MERCADO OTC (VIP) - ABERTO' };
+    } else {
+      // Mercado Real em OB fecha no final de semana
+      return { 
+        isOpen: !isWeekend, 
+        isOTC: false, 
+        label: isWeekend ? 'FECHADO (MERCADO REAL)' : 'MERCADO REAL - ABERTO' 
+      };
+    }
   }, [assetCategory, signalType, marketPreference, Math.floor(Date.now() / 60000)]);
+
+  // Auto-switch para OTC se for final de semana e estiver em moedas/binárias
+  useEffect(() => {
+    const now = new Date();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    if (isWeekend && assetCategory === 'MOEDAS' && signalType === SignalType.BINARY && marketPreference === 'REAL') {
+      setMarketPreference('OTC');
+    }
+  }, [assetCategory, signalType]);
 
   const currentPairsList = useMemo(() => {
     if (assetCategory === 'CRYPTO') return CRYPTO_PAIRS;
@@ -126,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       
       setSecondsToNextCandle(tfSeconds);
       
-      if (signalType === SignalType.BINARY && isAutoMode) {
+      if (signalType === SignalType.BINARY && isAutoMode && marketStatus.isOpen) {
         if (tfSeconds === 30 && autoTriggeredRef.current !== currentBoundary) {
           autoTriggeredRef.current = currentBoundary;
           triggerSignalGeneration();
@@ -170,8 +191,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
       <main className="flex-1 flex flex-col items-center p-3 md:p-6 space-y-4 md:space-y-6 max-w-6xl mx-auto w-full">
         <div className="w-full flex justify-center">
-           <div className={`px-4 py-1.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${marketStatus.label.includes('OTC') ? 'border-amber-500/20 text-amber-400 bg-amber-500/5' : 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'}`}>
-             <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${marketStatus.label.includes('OTC') ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+           <div className={`px-4 py-1.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${marketStatus.isOpen ? (marketStatus.label.includes('OTC') ? 'border-amber-500/20 text-amber-400 bg-amber-500/5' : 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5') : 'border-rose-500/20 text-rose-400 bg-rose-500/5'}`}>
+             <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${!marketStatus.isOpen ? 'bg-rose-500' : (marketStatus.label.includes('OTC') ? 'bg-amber-500' : 'bg-emerald-500')}`}></div>
              {marketStatus.label}
            </div>
         </div>
@@ -180,7 +201,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
           <div className="lg:col-span-5 space-y-4">
             <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-6">
               
-              {/* 1. SELETOR DE MODALIDADE (O Filtro Principal) */}
+              {/* 1. SELETOR DE MODALIDADE */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">1. Modalidade</h3>
@@ -220,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                        onClick={() => setMarketPreference('REAL')} 
                        className={`flex-1 py-2 rounded-lg text-[8px] font-black transition-all border ${marketPreference === 'REAL' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600'}`}
                      >
-                       MERCADO REAL
+                       MERCADO REAL {(new Date().getDay() === 0 || new Date().getDay() === 6) && '(FECHADO)'}
                      </button>
                      <button 
                        onClick={() => setMarketPreference('OTC')} 
@@ -262,15 +283,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <button 
                   onClick={triggerSignalGeneration} 
                   disabled={isScanning || !marketStatus.isOpen}
-                  className="w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-blue-600 text-white hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50 shadow-xl shadow-blue-500/20 group overflow-hidden relative"
+                  className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-xl group overflow-hidden relative ${!marketStatus.isOpen ? 'bg-rose-900/40 text-rose-500 border border-rose-500/20 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20'}`}
                 >
-                  <span className="relative z-10">{isScanning ? scanningText : 'GERAR ANÁLISE ULTRA'}</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                  <span className="relative z-10">
+                    {!marketStatus.isOpen ? 'MERCADO FECHADO' : (isScanning ? scanningText : 'GERAR ANÁLISE ULTRA')}
+                  </span>
+                  {marketStatus.isOpen && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
                 </button>
               ) : (
-                <div className="text-center py-5 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
-                   <p className="text-[8px] font-black uppercase text-emerald-400 tracking-widest animate-pulse">
-                     {isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`}
+                <div className={`text-center py-5 rounded-2xl border ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                   <p className={`text-[8px] font-black uppercase tracking-widest ${!marketStatus.isOpen ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`}>
+                     {!marketStatus.isOpen ? 'MERCADO FECHADO' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
                    </p>
                 </div>
               )}
@@ -296,7 +319,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">Aguardando Quebra de Movimento</p>
+                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">
+                  {!marketStatus.isOpen ? 'Aguardando Abertura do Mercado' : 'Aguardando Quebra de Movimento'}
+                </p>
               </div>
             )}
           </div>
