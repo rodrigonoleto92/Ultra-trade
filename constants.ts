@@ -56,6 +56,11 @@ export const FOREX_TIMEFRAMES = [
 
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
+// vencimento: 
+// Wallace: 24/jan/27
+// Dudu:    29/jan/27
+// Tobias:  31/jan/27
+
 // Lista de usuários restaurada para o padrão original
 // Agora aceitando caracteres especiais e maiúsculas na validação
 export const APP_USERS = [
