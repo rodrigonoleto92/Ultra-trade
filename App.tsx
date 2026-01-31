@@ -30,7 +30,6 @@ const App: React.FC = () => {
   });
   
   const [isVerifying, setIsVerifying] = useState(false);
-  const [updateDetected, setUpdateDetected] = useState(false);
 
   const handleLogout = useCallback(() => {
     setAuthPassword(null);
@@ -77,7 +76,7 @@ const App: React.FC = () => {
     setTimeout(() => setIsVerifying(false), 2000);
   }, [view, authPassword, validateUser, handleLogout]);
 
-  // Monitoramento de Versão
+  // Monitoramento de Versão (Silencioso)
   useEffect(() => {
     const checkAppUpdate = async () => {
       try {
@@ -86,7 +85,8 @@ const App: React.FC = () => {
         const lastEtag = localStorage.getItem('ultra_last_etag');
         
         if (lastEtag && etag && lastEtag !== etag) {
-          setUpdateDetected(true);
+          // Detectou atualização: Recarrega silenciosamente após 3 segundos
+          localStorage.setItem('ultra_last_etag', etag);
           setTimeout(() => window.location.reload(), 3000);
         } else if (etag) {
           localStorage.setItem('ultra_last_etag', etag);
@@ -98,11 +98,11 @@ const App: React.FC = () => {
     return () => clearInterval(versionTimer);
   }, []);
 
-  // Monitoramento de Sessão (Heartbeat + Gatilhos de Foco/Visibilidade)
+  // Monitoramento de Sessão (Silencioso)
   useEffect(() => {
     if (view !== 'DASHBOARD' || !authPassword) return;
 
-    // 1. Check periódico (enquanto a página está aberta e visível)
+    // 1. Check periódico
     const timer = setInterval(performStrictValidation, SECURITY_CHECK_INTERVAL);
 
     // 2. Check Imediato ao voltar para a aba ou desbloquear o celular
@@ -148,35 +148,10 @@ const App: React.FC = () => {
     setView('SUCCESS');
   };
 
-  if (updateDetected) {
-    return (
-      <div className="min-h-screen bg-[#050507] flex items-center justify-center p-6 text-center">
-        <div className="glass p-10 rounded-[40px] border border-blue-500/30">
-          <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-spin">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Atualizando Sistema</h2>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sincronizando novas chaves e protocolos...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (view === 'DASHBOARD') {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
-          <div className={`flex items-center gap-3 px-6 py-2 rounded-full border backdrop-blur-2xl shadow-2xl transition-all duration-1000 ${
-            isVerifying ? 'bg-blue-600/20 border-blue-400/50 opacity-100' : 'bg-emerald-600/10 border-emerald-400/20 opacity-40'
-          }`}>
-            <div className={`h-2 w-2 rounded-full ${isVerifying ? 'bg-blue-400 animate-ping' : 'bg-emerald-400'}`}></div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-white">
-              {isVerifying ? 'Validando Protocolos...' : 'Sessão Protegida'}
-            </span>
-          </div>
-        </div>
+        {/* Validação agora é silenciosa - a barra de status foi removida */}
         <Dashboard onLogout={handleLogout} userName={userName} authPassword={authPassword || ''} />
       </div>
     );
