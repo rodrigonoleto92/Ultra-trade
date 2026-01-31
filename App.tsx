@@ -8,13 +8,12 @@ import { APP_USERS, REMOTE_PASSWORDS_URL, SECURITY_VERSION } from './constants';
 
 type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
 
-const SECURITY_CHECK_INTERVAL = 30000; // 30 segundos
-const VERSION_CHECK_INTERVAL = 60000; // 1 minuto
+const SECURITY_CHECK_INTERVAL = 30000; // 30 segundos para check em background
+const VERSION_CHECK_INTERVAL = 60000; // 1 minuto para check de versão
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(() => {
     const savedVersion = sessionStorage.getItem('ultra_v');
-    // Se a versão gravada for diferente da atual do código, limpa tudo
     if (savedVersion && savedVersion !== SECURITY_VERSION) {
       sessionStorage.clear();
       return 'LOGIN';
@@ -37,17 +36,13 @@ const App: React.FC = () => {
     setAuthPassword(null);
     setView('LOGIN');
     sessionStorage.clear();
-    // Força um reload para garantir que o código seja renovado após logout
     window.location.reload();
   }, []);
 
   const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
-    // 1. Verificação na lista de usuários fixos (no código)
     const user = APP_USERS.find(u => u.key === pass);
     if (user) return { isValid: true, name: user.name };
 
-    // 2. Verificação remota (Arquivo externo)
-    // Se você mudar o senhas.txt no GitHub, isso desloga o usuário em 30s
     try {
       const response = await fetch(`${REMOTE_PASSWORDS_URL}?t=${Date.now()}`);
       if (response.ok) {
@@ -59,7 +54,6 @@ const App: React.FC = () => {
       console.error("Erro na validação remota");
     }
 
-    // 3. Verificação local (Registro)
     const localUsersRaw = localStorage.getItem('registered_users_data');
     if (localUsersRaw) {
       const localUsers = JSON.parse(localUsersRaw);
@@ -70,52 +64,68 @@ const App: React.FC = () => {
     return { isValid: false };
   }, []);
 
-  // Monitoramento de Versão do App
-  // Se você mudar o SECURITY_VERSION no constants.ts, o navegador vai detectar
+  const performStrictValidation = useCallback(async () => {
+    if (view !== 'DASHBOARD' || !authPassword) return;
+    
+    setIsVerifying(true);
+    const { isValid } = await validateUser(authPassword);
+    
+    if (!isValid) {
+      handleLogout();
+    }
+    
+    setTimeout(() => setIsVerifying(false), 2000);
+  }, [view, authPassword, validateUser, handleLogout]);
+
+  // Monitoramento de Versão
   useEffect(() => {
     const checkAppUpdate = async () => {
       try {
-        // Busca o próprio index.html ou um arquivo de versão para ver se mudou
         const response = await fetch(`${window.location.origin}/index.html?t=${Date.now()}`, { method: 'HEAD' });
         const etag = response.headers.get('etag') || response.headers.get('last-modified');
         const lastEtag = localStorage.getItem('ultra_last_etag');
         
         if (lastEtag && etag && lastEtag !== etag) {
           setUpdateDetected(true);
-          setTimeout(() => {
-            window.location.reload(); // Atualiza a página para pegar o código novo
-          }, 3000);
+          setTimeout(() => window.location.reload(), 3000);
         } else if (etag) {
           localStorage.setItem('ultra_last_etag', etag);
         }
-      } catch (e) {
-        // Falha silenciosa
-      }
+      } catch (e) {}
     };
 
     const versionTimer = setInterval(checkAppUpdate, VERSION_CHECK_INTERVAL);
     return () => clearInterval(versionTimer);
   }, []);
 
-  // Monitoramento de Sessão (Heartbeat)
+  // Monitoramento de Sessão (Heartbeat + Gatilhos de Foco/Visibilidade)
   useEffect(() => {
     if (view !== 'DASHBOARD' || !authPassword) return;
 
-    const performStrictValidation = async () => {
-      setIsVerifying(true);
-      const { isValid } = await validateUser(authPassword);
-      
-      if (!isValid) {
-        handleLogout();
+    // 1. Check periódico (enquanto a página está aberta e visível)
+    const timer = setInterval(performStrictValidation, SECURITY_CHECK_INTERVAL);
+
+    // 2. Check Imediato ao voltar para a aba ou desbloquear o celular
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        performStrictValidation();
       }
-      
-      // Feedback visual de segurança
-      setTimeout(() => setIsVerifying(false), 2000);
     };
 
-    const timer = setInterval(performStrictValidation, SECURITY_CHECK_INTERVAL);
-    return () => clearInterval(timer);
-  }, [view, authPassword, handleLogout, validateUser]);
+    // 3. Check Imediato ao focar na janela
+    const handleFocus = () => {
+      performStrictValidation();
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [view, authPassword, performStrictValidation]);
 
   const handleLogin = async (pass: string) => {
     setIsVerifying(true);
@@ -138,7 +148,6 @@ const App: React.FC = () => {
     setView('SUCCESS');
   };
 
-  // UI de atualização detectada
   if (updateDetected) {
     return (
       <div className="min-h-screen bg-[#050507] flex items-center justify-center p-6 text-center">
@@ -158,7 +167,6 @@ const App: React.FC = () => {
   if (view === 'DASHBOARD') {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        {/* Barra de Status de Segurança */}
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
           <div className={`flex items-center gap-3 px-6 py-2 rounded-full border backdrop-blur-2xl shadow-2xl transition-all duration-1000 ${
             isVerifying ? 'bg-blue-600/20 border-blue-400/50 opacity-100' : 'bg-emerald-600/10 border-emerald-400/20 opacity-40'
