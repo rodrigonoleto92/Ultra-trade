@@ -64,7 +64,7 @@ export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuar
 // Lista de usuários restaurada para o padrão original
 // Agora aceitando caracteres especiais e maiúsculas na validação
 export const APP_USERS = [
-  { key: 'admin_eu', name: 'Rodrigo' },
+  { key: 'admin_92', name: 'Rodrigo' },
   { key: 'ruan_vitalicio', name: 'Ruan' },
   { key: 'duda2102', name: 'WALLACE' },
   { key: '03silva#', name: 'Eduardo' },
