@@ -155,10 +155,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, isScanning, currentPairsList, isAutoMode]);
 
   return (
-    <div className="flex-1 flex flex-col text-white overflow-y-auto relative">
+    <div className="flex-1 flex flex-col text-white relative">
       <NewsModal isOpen={showNews} onClose={() => setShowNews(false)} />
       
-      <header className="h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-40">
+      {/* HEADER FIXO (STICKY) */}
+      <header className="h-20 md:h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/80 backdrop-blur-2xl sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center gap-3">
           <Logo size="sm" hideText />
           <div className="flex flex-col">
@@ -167,26 +168,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
           </div>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-6">
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 md:px-6 py-2 md:py-3 rounded-2xl shadow-lg">
-             <span className="text-base md:text-2xl font-mono font-black logo-gradient-text tracking-wider">
+        <div className="flex items-center gap-2 md:gap-6">
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 md:px-6 py-1.5 md:py-3 rounded-2xl shadow-lg">
+             <span className="text-sm md:text-2xl font-mono font-black logo-gradient-text tracking-wider">
                {formatTime(secondsToNextCandle)}
              </span>
-             <div className={`h-2 w-2 md:h-3 md:w-3 rounded-full shadow-[0_0_10px_currentColor] ${
+             <div className={`h-1.5 w-1.5 md:h-3 md:w-3 rounded-full shadow-[0_0_10px_currentColor] ${
                secondsToNextCandle <= 5 ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'
              }`}></div>
           </div>
           
-          <button onClick={onLogout} className="p-3 bg-white/5 border border-white/10 rounded-2xl transition-colors hover:bg-rose-500/10 group">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-slate-400 group-hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button onClick={onLogout} className="p-2.5 md:p-3 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl transition-colors hover:bg-rose-500/10 group">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-6 md:w-6 text-slate-400 group-hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
           </button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center p-3 md:p-6 space-y-4 md:space-y-6 max-w-6xl mx-auto w-full">
-        <div className="w-full flex justify-center">
+      <main className="flex-1 flex flex-col items-center p-3 md:p-6 space-y-4 md:space-y-6 max-w-6xl mx-auto w-full pb-20">
+        <div className="w-full flex justify-center pt-2">
            <div className={`px-4 py-1.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${marketStatus.isOpen ? (marketStatus.label.includes('OTC') ? 'border-amber-500/20 text-amber-400 bg-amber-500/5' : 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5') : 'border-rose-500/20 text-rose-400 bg-rose-500/5'}`}>
              <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${!marketStatus.isOpen ? 'bg-rose-500' : (marketStatus.label.includes('OTC') ? 'bg-amber-500' : 'bg-emerald-500')}`}></div>
              {marketStatus.label}
@@ -294,7 +295,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                     className="w-full py-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-white/10 group"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002-2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002-2z" />
                     </svg>
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white">Calendário Econômico</span>
                   </button>
@@ -305,7 +306,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
           <div className="lg:col-span-7 flex flex-col">
             {isScanning ? (
-              <div className="flex-1 glass rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center border border-blue-500/20">
+              <div className="flex-1 glass rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center border border-blue-500/20 min-h-[300px]">
                 <div className="h-10 w-10 mb-4 relative">
                    <div className="absolute inset-0 border-2 border-blue-500/20 rounded-full animate-ping"></div>
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -318,7 +319,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <SignalCard signal={activeSignal} />
               </div>
             ) : (
-              <div className="flex-1 border-2 border-dashed border-white/5 rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center opacity-30">
+              <div className="flex-1 border-2 border-dashed border-white/5 rounded-[24px] md:rounded-[40px] flex flex-col items-center justify-center p-8 text-center opacity-30 min-h-[300px]">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
