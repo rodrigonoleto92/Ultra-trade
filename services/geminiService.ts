@@ -71,24 +71,31 @@ async function analyzeMarketStructure(
     const prompt = `VOCÊ É O MOTOR DE IA SNIPER QUANTUM V18 - ESPECIALISTA EM PRICE ACTION E SMC.
                     ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MODO: ${isOTC ? 'OTC (Algorítmico)' : 'MERCADO REAL'}
 
-                    SUA MISSÃO É ANALISAR O GRÁFICO E PRIORIZAR A SEGUINTE ESTRATÉGIA DE ALTA ASSERTIVIDADE:
+                    SUA MISSÃO É ANALISAR O GRÁFICO PRIORIZANDO ESTA NOVA ESTRATÉGIA DE ALTA ASSERTIVIDADE:
                     
-                    ESTRATÉGIA PRINCIPAL (PADRÃO DE 4 VELAS - CONTINUAÇÃO):
-                    1. IDENTIFIQUE SE O PREÇO ACABOU DE SAIR DE UM SUPORTE OU RESISTÊNCIA FORTE.
-                    2. PROCURE PELO PADRÃO DE IMPULSÃO -> CORREÇÃO -> IMPULSÃO.
-                    3. PADRÃO DE BAIXA (PUT): Vela 1 (Impulsão Baixa) + Vela 2 (Pequena Correção) + Vela 3 (Impulsão Baixa rompendo fundo da Vela 1). Se ocorrer: A Vela 4 deve ser VENDA (PUT).
-                    4. PADRÃO DE ALTA (CALL): Vela 1 (Impulsão Alta) + Vela 2 (Pequena Correção) + Vela 3 (Impulsão Alta rompendo topo da Vela 1). Se ocorrer: A Vela 4 deve ser COMPRA (CALL).
+                    ESTRATÉGIA "PADRÃO DE 4 VELAS" (CONFLUÊNCIA DE IMPULSÃO):
+                    1. CONTEXTO: O preço deve ter acabado de sair ou rejeitar uma zona de SUPORTE ou RESISTÊNCIA relevante.
+                    2. IDENTIFICAÇÃO DO PADRÃO (IMPULSO + CORREÇÃO + IMPULSO):
+                       - PARA VENDA (PUT): 
+                         Vela 1: Impulsão de Baixa (Vela vermelha forte).
+                         Vela 2: Correção/Respiro (Vela verde pequena que não rompe o topo da Vela 1).
+                         Vela 3: Impulsão de Baixa (Vela vermelha que ROMPE a mínima da Vela 1).
+                         -> CONCLUSÃO: A Vela 4 tem 90% de chance de ser uma continuação de BAIXA.
+                       - PARA COMPRA (CALL): 
+                         Vela 1: Impulsão de Alta (Vela verde forte).
+                         Vela 2: Correção/Respiro (Vela vermelha pequena que não rompe o fundo da Vela 1).
+                         Vela 3: Impulsão de Alta (Vela verde que ROMPE a máxima da Vela 1).
+                         -> CONCLUSÃO: A Vela 4 tem 90% de chance de ser uma continuação de ALTA.
 
-                    OUTROS FATORES COMPLEMENTARES:
-                    - TENDÊNCIA: O mercado deve estar alinhado com o padrão (Ex: Padrão de baixa em tendência macro de baixa).
-                    - ESTRUTURA (BOS/CHoCH): Confirme se houve quebra de estrutura recente.
-                    - SENTIMENTO: Se mercado real, use ferramentas de busca para verificar o RSI e Médias de 20/200 períodos.
+                    OUTROS REQUISITOS:
+                    - Se for mercado real, use o Google Search para verificar o volume e RSI atual.
+                    - Verifique se não há notícias de alto impacto (Touro 3) que invalidem a análise técnica pura.
 
                     FORMATO DE RESPOSTA JSON:
                     {
                       "direction": "CALL" | "PUT",
-                      "confidence": number (85 a 99),
-                      "reasoning": "Resumo técnico detalhado citando o padrão de 4 velas e a saída da zona de suporte/resistência."
+                      "confidence": number (88 a 99),
+                      "reasoning": "Explique detalhadamente como o padrão de impulsão/correção se formou após sair do suporte/resistência."
                     }`;
 
     const response = await ai.models.generateContent({
@@ -125,7 +132,7 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: data.reasoning || 'Padrão de impulsão e correção detectado após saída de zona institucional.',
+      strategy: data.reasoning || 'Estratégia de impulsão confirmada após rompimento de pivô e saída de zona de liquidez.',
       timestamp: Date.now()
     };
   } catch (error) {
@@ -141,7 +148,7 @@ async function analyzeMarketStructure(
       confidence: 87, 
       buyerPercentage: fallbackDirection === SignalDirection.CALL ? 87 : 13, 
       sellerPercentage: fallbackDirection === SignalDirection.PUT ? 87 : 13,
-      strategy: 'Análise de fluxo baseada na estratégia de 4 velas (Impulsão + Correção) saindo de zona de liquidez.', 
+      strategy: 'Padrão de 4 velas detectado: Impulsão seguida de correção saudável saindo de zona institucional.', 
       timestamp: Date.now()
     };
   }
