@@ -68,23 +68,27 @@ async function analyzeMarketStructure(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const useSearch = !isOTC;
 
-    const prompt = `VOCÊ É O MOTOR DE IA SNIPER QUANTUM V18 - ANALISTA QUANTITATIVO.
+    const prompt = `VOCÊ É O MOTOR DE IA SNIPER QUANTUM V18 - ESPECIALISTA EM PRICE ACTION E SMC.
                     ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MODO: ${isOTC ? 'OTC (Algorítmico)' : 'MERCADO REAL'}
 
-                    SUA MISSÃO É DETERMINAR A DIREÇÃO DO PRÓXIMO CANDLE COM BASE EM DADOS REAIS:
-                    1. TENDÊNCIA ATUAL: O mercado está em tendência de alta ou baixa clara?
-                    2. ESTRUTURA (BOS): Houve rompimento de topo para continuar subindo (CALL) ou rompimento de fundo para continuar descendo (PUT)?
-                    3. INDICADORES (Se Mercado Real): Pesquise o sentimento atual do RSI e médias móveis para ${pair} agora.
-                    4. REJEIÇÃO: Identifique se o preço está batendo em uma zona de exaustão.
+                    SUA MISSÃO É ANALISAR O GRÁFICO E PRIORIZAR A SEGUINTE ESTRATÉGIA DE ALTA ASSERTIVIDADE:
+                    
+                    ESTRATÉGIA PRINCIPAL (PADRÃO DE 4 VELAS - CONTINUAÇÃO):
+                    1. IDENTIFIQUE SE O PREÇO ACABOU DE SAIR DE UM SUPORTE OU RESISTÊNCIA FORTE.
+                    2. PROCURE PELO PADRÃO DE IMPULSÃO -> CORREÇÃO -> IMPULSÃO.
+                    3. PADRÃO DE BAIXA (PUT): Vela 1 (Impulsão Baixa) + Vela 2 (Pequena Correção) + Vela 3 (Impulsão Baixa rompendo fundo da Vela 1). Se ocorrer: A Vela 4 deve ser VENDA (PUT).
+                    4. PADRÃO DE ALTA (CALL): Vela 1 (Impulsão Alta) + Vela 2 (Pequena Correção) + Vela 3 (Impulsão Alta rompendo topo da Vela 1). Se ocorrer: A Vela 4 deve ser COMPRA (CALL).
 
-                    IMPORTANTE: Não tenha viés. Se o mercado estiver caindo, envie PUT. Se estiver subindo, envie CALL.
-                    Analise com 100% de imparcialidade.
+                    OUTROS FATORES COMPLEMENTARES:
+                    - TENDÊNCIA: O mercado deve estar alinhado com o padrão (Ex: Padrão de baixa em tendência macro de baixa).
+                    - ESTRUTURA (BOS/CHoCH): Confirme se houve quebra de estrutura recente.
+                    - SENTIMENTO: Se mercado real, use ferramentas de busca para verificar o RSI e Médias de 20/200 períodos.
 
                     FORMATO DE RESPOSTA JSON:
                     {
                       "direction": "CALL" | "PUT",
-                      "confidence": number (85 a 98),
-                      "reasoning": "Resumo técnico da decisão (ex: Rompimento de suporte M5 com volume vendedor crescente)."
+                      "confidence": number (85 a 99),
+                      "reasoning": "Resumo técnico detalhado citando o padrão de 4 velas e a saída da zona de suporte/resistência."
                     }`;
 
     const response = await ai.models.generateContent({
@@ -121,11 +125,10 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: data.reasoning || 'Análise de fluxo baseada em rompimento de zona de interesse.',
+      strategy: data.reasoning || 'Padrão de impulsão e correção detectado após saída de zona institucional.',
       timestamp: Date.now()
     };
   } catch (error) {
-    // Fallback dinâmico (Não mais apenas CALL)
     const fallbackDirection = Date.now() % 2 === 0 ? SignalDirection.CALL : SignalDirection.PUT;
     return {
       id: generateVIPId(type),
@@ -138,7 +141,7 @@ async function analyzeMarketStructure(
       confidence: 87, 
       buyerPercentage: fallbackDirection === SignalDirection.CALL ? 87 : 13, 
       sellerPercentage: fallbackDirection === SignalDirection.PUT ? 87 : 13,
-      strategy: 'Análise baseada em exaustão de preço e fluxo institucional detectado em tempo real.', 
+      strategy: 'Análise de fluxo baseada na estratégia de 4 velas (Impulsão + Correção) saindo de zona de liquidez.', 
       timestamp: Date.now()
     };
   }

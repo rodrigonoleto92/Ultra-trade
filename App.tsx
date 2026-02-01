@@ -4,6 +4,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Register from './components/Register';
 import Success from './components/Success';
+import TickerTape from './components/TickerTape';
 import { APP_USERS, REMOTE_PASSWORDS_URL, SECURITY_VERSION } from './constants';
 
 type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
@@ -85,7 +86,6 @@ const App: React.FC = () => {
         const lastEtag = localStorage.getItem('ultra_last_etag');
         
         if (lastEtag && etag && lastEtag !== etag) {
-          // Detectou atualização: Recarrega silenciosamente após 3 segundos
           localStorage.setItem('ultra_last_etag', etag);
           setTimeout(() => window.location.reload(), 3000);
         } else if (etag) {
@@ -102,17 +102,14 @@ const App: React.FC = () => {
   useEffect(() => {
     if (view !== 'DASHBOARD' || !authPassword) return;
 
-    // 1. Check periódico
     const timer = setInterval(performStrictValidation, SECURITY_CHECK_INTERVAL);
 
-    // 2. Check Imediato ao voltar para a aba ou desbloquear o celular
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         performStrictValidation();
       }
     };
 
-    // 3. Check Imediato ao focar na janela
     const handleFocus = () => {
       performStrictValidation();
     };
@@ -148,24 +145,27 @@ const App: React.FC = () => {
     setView('SUCCESS');
   };
 
-  if (view === 'DASHBOARD') {
-    return (
-      <div className="min-h-screen bg-[#0a0a0c]">
-        {/* Validação agora é silenciosa - a barra de status foi removida */}
+  return (
+    <div className="min-h-screen bg-[#0a0a0c] flex flex-col">
+      <TickerTape />
+      
+      {view === 'DASHBOARD' && (
         <Dashboard onLogout={handleLogout} userName={userName} authPassword={authPassword || ''} />
-      </div>
-    );
-  }
+      )}
 
-  if (view === 'REGISTER') {
-    return <Register onSuccess={handleRegisterSuccess} onBackToLogin={() => setView('LOGIN')} />;
-  }
+      {view === 'REGISTER' && (
+        <Register onSuccess={handleRegisterSuccess} onBackToLogin={() => setView('LOGIN')} />
+      )}
 
-  if (view === 'SUCCESS') {
-    return <Success onGoToLogin={() => setView('LOGIN')} />;
-  }
+      {view === 'SUCCESS' && (
+        <Success onGoToLogin={() => setView('LOGIN')} />
+      )}
 
-  return <Login onLogin={handleLogin} />;
+      {view === 'LOGIN' && (
+        <Login onLogin={handleLogin} />
+      )}
+    </div>
+  );
 };
 
 export default App;

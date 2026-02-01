@@ -5,6 +5,7 @@ import { Signal, Timeframe, SignalType } from '../types';
 import { generateSignal, scanForBestSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
+import NewsModal from './NewsModal';
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -30,35 +31,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [isScanning, setIsScanning] = useState(false);
   const [scanningText, setScanningText] = useState('ANALISANDO FLUXO...');
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
+  const [showNews, setShowNews] = useState(false);
   
   const autoTriggeredRef = useRef<number | null>(null);
 
-  // Lógica de status de mercado atualizada para respeitar finais de semana
   const marketStatus = useMemo(() => {
     const now = new Date();
-    const day = now.getDay(); // 0 = Domingo, 6 = Sábado
+    const day = now.getDay(); 
     const hour = now.getHours();
     const minutes = now.getMinutes();
     const timeValue = hour * 60 + minutes;
 
     const isWeekend = (day === 6) || (day === 0);
 
-    // Crypto sempre aberto
     if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO) - ABERTO', isOTC: false };
     
-    // Forex fecha nos finais de semana
     if (signalType === SignalType.FOREX) {
-      // Forex fecha Sexta 18:00 (1080 min) e abre Domingo 18:00 (1080 min)
-      // Simplificado: Sábado e Domingo está fechado.
       const isForexWeekend = isWeekend || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
       return isForexWeekend ? { isOpen: false, label: 'FECHADO (FOREX REAL)', isOTC: false } : { isOpen: true, label: 'REAL (FOREX) - ABERTO', isOTC: false };
     }
 
-    // Opções Binárias
     if (marketPreference === 'OTC') {
       return { isOpen: true, isOTC: true, label: 'MERCADO OTC (VIP) - ABERTO' };
     } else {
-      // Mercado Real em OB fecha no final de semana
       return { 
         isOpen: !isWeekend, 
         isOTC: false, 
@@ -67,7 +62,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     }
   }, [assetCategory, signalType, marketPreference, Math.floor(Date.now() / 60000)]);
 
-  // Auto-switch para OTC se for final de semana e estiver em moedas/binárias
   useEffect(() => {
     const now = new Date();
     const isWeekend = now.getDay() === 0 || now.getDay() === 6;
@@ -161,8 +155,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   }, [selectedTimeframe, signalType, marketStatus.isOpen, activeSignal, isScanning, currentPairsList, isAutoMode]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] flex flex-col text-white">
-      <header className="h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-50">
+    <div className="flex-1 flex flex-col text-white overflow-y-auto relative">
+      <NewsModal isOpen={showNews} onClose={() => setShowNews(false)} />
+      
+      <header className="h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <Logo size="sm" hideText />
           <div className="flex flex-col">
@@ -201,7 +197,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
           <div className="lg:col-span-5 space-y-4">
             <div className="glass p-5 md:p-8 rounded-[24px] md:rounded-[40px] border border-white/5 shadow-xl space-y-6">
               
-              {/* 1. SELETOR DE MODALIDADE */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">1. Modalidade</h3>
@@ -223,7 +218,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {/* 2. SELETOR DE CATEGORIA */}
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">2. Ativos</h3>
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -232,7 +226,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {/* 3. SELETOR DE MERCADO */}
               {signalType === SignalType.BINARY && assetCategory === 'MOEDAS' && (
                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
                    <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">3. Tipo de Mercado</h3>
@@ -253,7 +246,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                  </div>
               )}
 
-              {/* 4. ATIVO E TIMEFRAME */}
               <div className="space-y-4 pt-2 border-t border-white/5">
                 {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -278,7 +270,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
               </div>
 
-              {/* BOTÃO DE AÇÃO */}
               {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) ? (
                 <button 
                   onClick={triggerSignalGeneration} 
@@ -291,10 +282,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                   {marketStatus.isOpen && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
                 </button>
               ) : (
-                <div className={`text-center py-5 rounded-2xl border ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
-                   <p className={`text-[8px] font-black uppercase tracking-widest ${!marketStatus.isOpen ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`}>
-                     {!marketStatus.isOpen ? 'MERCADO FECHADO' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
-                   </p>
+                <div className="space-y-3">
+                  <div className={`text-center py-5 rounded-2xl border ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                    <p className={`text-[8px] font-black uppercase tracking-widest ${!marketStatus.isOpen ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`}>
+                      {!marketStatus.isOpen ? 'MERCADO FECHADO' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
+                    </p>
+                  </div>
+                  
+                  <button 
+                    onClick={() => setShowNews(true)}
+                    className="w-full py-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-white/10 group"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                    </svg>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white">Impacto de Notícias</span>
+                  </button>
                 </div>
               )}
             </div>

@@ -27,7 +27,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#050507] px-4 overflow-hidden relative">
+    <div className="flex-1 flex items-center justify-center bg-[#050507] px-4 overflow-hidden relative">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none overflow-hidden">
         <div className="flex justify-around w-full h-full">
           {[...Array(15)].map((_, i) => (
