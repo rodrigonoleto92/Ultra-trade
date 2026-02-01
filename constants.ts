@@ -1,8 +1,9 @@
 
 import { CurrencyPair, MarketType, Timeframe } from './types';
 
-// CONTROLE DE SEGURANÇA GLOBAL
+// CONTROLE DE SEGURANÇA E SESSÃO GLOBAL
 export const SECURITY_VERSION = 'v12.1.3'; 
+export const SESSION_VERSION = '1.0.4'; // Incremente este número para deslogar todos os usuários
 
 export const FOREX_PAIRS: CurrencyPair[] = [
   { symbol: 'XAU/USD', type: MarketType.FOREX },
@@ -68,13 +69,6 @@ export const FOREX_TIMEFRAMES = [
 
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
-// vencimento: 
-// Wallace: 24/jan/27
-// Dudu:    29/jan/27
-// Tobias:  31/jan/27
-
-// Lista de usuários restaurada para o padrão original
-// Agora aceitando caracteres especiais e maiúsculas na validação
 export const APP_USERS = [
   { key: 'admin_92', name: 'Rodrigo' },
   { key: 'ruan_vitalicio', name: 'Ruan' },

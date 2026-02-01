@@ -1,41 +1,48 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Register from './components/Register';
 import Success from './components/Success';
 import TickerTape from './components/TickerTape';
-import { APP_USERS, REMOTE_PASSWORDS_URL, SECURITY_VERSION } from './constants';
+import { APP_USERS, REMOTE_PASSWORDS_URL, SECURITY_VERSION, SESSION_VERSION } from './constants';
 
 type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
 
-const SECURITY_CHECK_INTERVAL = 30000; // 30 segundos para check em background
-const VERSION_CHECK_INTERVAL = 60000; // 1 minuto para check de versão
+const SECURITY_CHECK_INTERVAL = 30000; // 30 segundos
 
 const App: React.FC = () => {
+  // Inicialização validando a versão da sessão salva
   const [view, setView] = useState<AppView>(() => {
-    const savedVersion = sessionStorage.getItem('ultra_v');
-    if (savedVersion && savedVersion !== SECURITY_VERSION) {
-      sessionStorage.clear();
+    const savedSession = localStorage.getItem('ultra_trade_session');
+    const savedVersion = localStorage.getItem('ultra_session_version');
+
+    // Se a versão do código for diferente da versão salva, limpa tudo e pede login
+    if (savedVersion !== SESSION_VERSION) {
+      localStorage.removeItem('ultra_trade_session');
+      localStorage.removeItem('ultra_trade_user');
+      localStorage.removeItem('ultra_session_version');
       return 'LOGIN';
     }
-    return sessionStorage.getItem('ultra_trade_session') ? 'DASHBOARD' : 'LOGIN';
+
+    return savedSession ? 'DASHBOARD' : 'LOGIN';
   });
 
   const [authPassword, setAuthPassword] = useState<string | null>(() => {
-    return sessionStorage.getItem('ultra_trade_session');
+    return localStorage.getItem('ultra_trade_session');
   });
 
   const [userName, setUserName] = useState<string>(() => {
-    return sessionStorage.getItem('ultra_trade_user') || 'Trader';
+    return localStorage.getItem('ultra_trade_user') || 'Trader';
   });
-  
-  const [isVerifying, setIsVerifying] = useState(false);
 
   const handleLogout = useCallback(() => {
     setAuthPassword(null);
+    localStorage.removeItem('ultra_trade_session');
+    localStorage.removeItem('ultra_trade_user');
+    localStorage.removeItem('ultra_session_version');
     setView('LOGIN');
-    sessionStorage.clear();
+    // Força o recarregamento para limpar estados residuais
     window.location.reload();
   }, []);
 
@@ -64,84 +71,67 @@ const App: React.FC = () => {
     return { isValid: false };
   }, []);
 
-  const performStrictValidation = useCallback(async () => {
-    if (view !== 'DASHBOARD' || !authPassword) return;
-    
-    setIsVerifying(true);
-    const { isValid } = await validateUser(authPassword);
-    
-    if (!isValid) {
-      handleLogout();
-    }
-    
-    setTimeout(() => setIsVerifying(false), 2000);
-  }, [view, authPassword, validateUser, handleLogout]);
-
-  // Monitoramento de Versão (Silencioso)
+  // Monitoramento contínuo de segurança e versão
   useEffect(() => {
-    const checkAppUpdate = async () => {
-      try {
-        const response = await fetch(`${window.location.origin}/index.html?t=${Date.now()}`, { method: 'HEAD' });
-        const etag = response.headers.get('etag') || response.headers.get('last-modified');
-        const lastEtag = localStorage.getItem('ultra_last_etag');
-        
-        if (lastEtag && etag && lastEtag !== etag) {
-          localStorage.setItem('ultra_last_etag', etag);
-          setTimeout(() => window.location.reload(), 3000);
-        } else if (etag) {
-          localStorage.setItem('ultra_last_etag', etag);
+    if (view !== 'DASHBOARD') return;
+
+    const checkSessionIntegrity = async () => {
+      const savedVersion = localStorage.getItem('ultra_session_version');
+      
+      // Verificação 1: Se a versão mudou no código (Atualização do admin)
+      if (savedVersion !== SESSION_VERSION) {
+        handleLogout();
+        return;
+      }
+
+      // Verificação 2: Se a senha ainda é válida (Revogação de acesso)
+      if (authPassword) {
+        const { isValid } = await validateUser(authPassword);
+        if (!isValid) {
+          handleLogout();
         }
-      } catch (e) {}
-    };
-
-    const versionTimer = setInterval(checkAppUpdate, VERSION_CHECK_INTERVAL);
-    return () => clearInterval(versionTimer);
-  }, []);
-
-  // Monitoramento de Sessão (Silencioso)
-  useEffect(() => {
-    if (view !== 'DASHBOARD' || !authPassword) return;
-
-    const timer = setInterval(performStrictValidation, SECURITY_CHECK_INTERVAL);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        performStrictValidation();
       }
     };
 
-    const handleFocus = () => {
-      performStrictValidation();
+    const timer = setInterval(checkSessionIntegrity, SECURITY_CHECK_INTERVAL);
+
+    // Verifica também ao voltar para a aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkSessionIntegrity();
+      }
     };
 
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', checkSessionIntegrity);
 
     return () => {
       clearInterval(timer);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', checkSessionIntegrity);
     };
-  }, [view, authPassword, performStrictValidation]);
+  }, [view, authPassword, validateUser, handleLogout]);
 
   const handleLogin = async (pass: string) => {
-    setIsVerifying(true);
     const { isValid, name } = await validateUser(pass);
     if (isValid) {
       const finalName = name || 'Trader';
+      
+      // Salva no estado
       setAuthPassword(pass);
       setUserName(finalName);
       setView('DASHBOARD');
-      sessionStorage.setItem('ultra_trade_session', pass);
-      sessionStorage.setItem('ultra_trade_user', finalName);
-      sessionStorage.setItem('ultra_v', SECURITY_VERSION);
+
+      // Salva no localStorage com a versão atual
+      localStorage.setItem('ultra_trade_session', pass);
+      localStorage.setItem('ultra_trade_user', finalName);
+      localStorage.setItem('ultra_session_version', SESSION_VERSION);
     } else {
       throw new Error("Credenciais inválidas.");
     }
-    setTimeout(() => setIsVerifying(false), 1000);
   };
 
-  const handleRegisterSuccess = (pass: string) => {
+  const handleRegisterSuccess = () => {
     setView('SUCCESS');
   };
 
@@ -150,7 +140,11 @@ const App: React.FC = () => {
       <TickerTape />
       
       {view === 'DASHBOARD' && (
-        <Dashboard onLogout={handleLogout} userName={userName} authPassword={authPassword || ''} />
+        <Dashboard 
+          onLogout={handleLogout} 
+          userName={userName} 
+          authPassword={authPassword || ''} 
+        />
       )}
 
       {view === 'REGISTER' && (
