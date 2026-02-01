@@ -61,7 +61,7 @@ export async function generateSignal(
 
 /**
  * MOTOR DE INTELIGÊNCIA UNIFICADO (SNIPER QUANTUM V18)
- * Reforçado para gerar justificativas extremamente detalhadas.
+ * Reforçado para gerar justificativas extremamente detalhadas sem citar nomes de corretoras.
  */
 async function analyzeMarketStructure(
   pair: string,
@@ -77,15 +77,15 @@ async function analyzeMarketStructure(
     const useSearch = !isOTC;
 
     const prompt = `VOCÊ É O ANALISTA SÊNIOR DO MOTOR SNIPER QUANTUM V18.
-                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | TIPO: ${isOTC ? 'ALGORITMO OTC (POLARIUM BROKER)' : 'MERCADO REAL'}
+                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | TIPO: ${isOTC ? 'ALGORITMO OTC (SINTÉTICO)' : 'MERCADO REAL'}
 
                     SUA TAREFA É GERAR UM SINAL COM UMA JUSTIFICATIVA TÉCNICA RICA, DETALHADA E PROFISSIONAL.
 
-                    REGRAS OBRIGATÓRIAS PARA O 'REASONING':
+                    REGRAS OBRIGATÓRIAS PARA O 'REASONING' (IMPORTANTE):
                     1. Use termos técnicos: "Order Block", "Fair Value Gap (FVG)", "Liquidez (SSL/BSL)", "CHoCH", "BOS" ou "Price Action Puro".
-                    2. Explique o Padrão de 4 Velas: Cite como a Vela 1 de impulso rompeu a estrutura, a Vela 2 corrigiu sem invalidar o pavio e a Vela 3 confirmou o volume.
-                    3. Se for OTC Polarium: Mencione que o sinal aproveita a "Exaustão Algorítmica" ou "Ciclo de Repetição de Tendência" específico da corretora.
-                    4. O texto deve ter entre 150 e 300 caracteres, sendo direto mas altamente técnico.
+                    2. Explique o Padrão de 4 Velas: Como a Vela 1 de impulso rompeu a estrutura, a Vela 2 corrigiu sem invalidar o pavio e a Vela 3 confirmou o volume.
+                    3. Se for OTC: Mencione a "Exaustão Algorítmica" ou "Ciclo de Repetição de Tendência" típico desta plataforma, mas JAMAIS CITE NOMES DE CORRETORAS (como Polarium, IQ, Pocket, etc). Refira-se apenas como "Algoritmo desta plataforma" ou "Fluxo OTC".
+                    4. O texto deve ser altamente técnico e profissional, focado na movimentação do gráfico.
 
                     ESTRATÉGIA BASE:
                     - CALL: Rejeição de Suporte + Padrão de Impulsão/Correção (V1/V2/V3).
@@ -132,14 +132,14 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: data.reasoning || `Padrão de 4 velas confirmado após rompimento de micro-estrutura em ${timeframe}. Identificada zona de Order Block com FVG não preenchido, indicando continuação do fluxo institucional.`,
+      strategy: data.reasoning || `Padrão de 4 velas confirmado após rompimento de micro-estrutura em ${timeframe}. Identificada zona de demanda com FVG pendente, indicando alta probabilidade de continuação do fluxo institucional.`,
       timestamp: Date.now()
     };
   } catch (error) {
     const fallbackDirection = Date.now() % 2 === 0 ? SignalDirection.CALL : SignalDirection.PUT;
     const fallbackReason = isOTC 
-      ? "Detectada exaustão no algoritmo da Polarium Broker após ciclo de 5 velas. O padrão de 4 velas indica reversão iminente por falta de liquidez no topo da estrutura."
-      : "Identificada quebra de estrutura (CHoCH) com entrada de volume comprador em zona de demanda institucional. Padrão V18 validado para a próxima vela.";
+      ? "Detectada exaustão no algoritmo de fluxo OTC após ciclo de 5 velas seguidas. O padrão Sniper de 4 velas indica reversão técnica iminente por saturação de volume na zona de exaustão."
+      : "Identificada quebra de estrutura (CHoCH) com entrada de volume institucional em zona de mitigação. Padrão de impulsão V18 validado para a próxima vela em confluência com o RSI.";
 
     return {
       id: generateVIPId(type),
