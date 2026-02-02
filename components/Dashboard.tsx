@@ -32,73 +32,68 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [scanningText, setScanningText] = useState('ANALISANDO FLUXO...');
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
   const [showNews, setShowNews] = useState(false);
+  const [marketAlert, setMarketAlert] = useState<string | null>(null);
+  const [shake, setShake] = useState(false);
   
   const autoTriggeredRef = useRef<number | null>(null);
 
+  // Lógica de Horário de Mercado (04:00 às 16:00)
   const marketStatus = useMemo(() => {
     const now = new Date();
     const day = now.getDay(); 
     const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const timeValue = hour * 60 + minutes;
-
-    const isWeekend = (day === 6) || (day === 0);
-
-    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO) - ABERTO', isOTC: false };
     
+    // Fim de semana (Sábado = 6, Domingo = 0)
+    const isWeekend = (day === 6) || (day === 0);
+    // Horário bancário brasileiro (04h às 16h)
+    const isWithinRealMarketHours = hour >= 4 && hour < 16;
+    const isRealMarketOpen = !isWeekend && isWithinRealMarketHours;
+
+    // Criptomoedas nunca fecham
+    if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO) - 24/7 ABERTO', isOTC: false };
+    
+    // Forex segue o horário real
     if (signalType === SignalType.FOREX) {
-      const isForexWeekend = isWeekend || (day === 5 && timeValue >= 1080) || (day === 1 && timeValue < 480);
-      return isForexWeekend ? { isOpen: false, label: 'FECHADO (FOREX REAL)', isOTC: false } : { isOpen: true, label: 'REAL (FOREX) - ABERTO', isOTC: false };
+      return isRealMarketOpen 
+        ? { isOpen: true, label: 'REAL (FOREX) - ABERTO', isOTC: false } 
+        : { isOpen: false, label: 'FECHADO (FOREX REAL)', isOTC: false };
     }
 
+    // Binárias (OB)
     if (marketPreference === 'OTC') {
       return { isOpen: true, isOTC: true, label: 'MERCADO OTC (VIP) - ABERTO' };
     } else {
       return { 
-        isOpen: !isWeekend, 
+        isOpen: isRealMarketOpen, 
         isOTC: false, 
-        label: isWeekend ? 'FECHADO (MERCADO REAL)' : 'MERCADO REAL - ABERTO' 
+        label: isRealMarketOpen ? 'MERCADO REAL - ABERTO' : 'FECHADO (MERCADO REAL)' 
       };
     }
   }, [assetCategory, signalType, marketPreference, Math.floor(Date.now() / 60000)]);
 
-  useEffect(() => {
-    const now = new Date();
-    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
-    if (isWeekend && assetCategory === 'MOEDAS' && signalType === SignalType.BINARY && marketPreference === 'REAL') {
-      setMarketPreference('OTC');
-    }
-  }, [assetCategory, signalType]);
-
-  const currentPairsList = useMemo(() => {
-    if (assetCategory === 'CRYPTO') return CRYPTO_PAIRS;
-    if (signalType === SignalType.BINARY) {
-      const baseList = marketPreference === 'OTC' ? OTC_PAIRS : FOREX_PAIRS;
-      return baseList.filter(p => p.symbol !== 'XAU/USD');
-    }
-    return FOREX_PAIRS;
-  }, [assetCategory, signalType, marketPreference]);
-
-  useEffect(() => {
-    const validPair = currentPairsList.find(p => p.symbol === selectedPair);
-    if (!validPair) {
-      setSelectedPair(currentPairsList[0]?.symbol || '');
-    }
-  }, [currentPairsList]);
-
   const triggerSignalGeneration = async () => {
-    if (isScanning || !marketStatus.isOpen) return;
+    if (isScanning) return;
+
+    // Se o mercado estiver fechado, exibe a mensagem e gera o feedback visual
+    if (!marketStatus.isOpen) {
+      setMarketAlert("MERCADO REAL FECHADO. O PREGÃO OCORRE DE SEG A SEX DAS 04:00 ÀS 16:00. MUDE PARA 'OTC' OU 'CRYPTO' PARA CONTINUAR.");
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      setTimeout(() => setMarketAlert(null), 6000);
+      return;
+    }
+
     setIsScanning(true);
-    
     const texts = [
+      'CONECTANDO AO DATA-FEED...', 
       'MAPEANDO ZONAS DE OFERTA...', 
       'IDENTIFICANDO QUEBRA DE ESTRUTURA...', 
-      'VALIDANDO FLUXO INSTITUCIONAL...', 
+      'VALIDANDO CONFLUÊNCIA RSI...',
       'SNIPER V18: SINAL CONFIRMADO!'
     ];
     for (const text of texts) {
       setScanningText(text);
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 600));
     }
 
     try {
@@ -119,6 +114,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       setIsScanning(false);
     }
   };
+
+  const currentPairsList = useMemo(() => {
+    if (assetCategory === 'CRYPTO') return CRYPTO_PAIRS;
+    if (signalType === SignalType.BINARY) {
+      const baseList = marketPreference === 'OTC' ? OTC_PAIRS : FOREX_PAIRS;
+      return baseList.filter(p => p.symbol !== 'XAU/USD');
+    }
+    return FOREX_PAIRS;
+  }, [assetCategory, signalType, marketPreference]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -158,7 +162,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     <div className="flex-1 flex flex-col text-white relative">
       <NewsModal isOpen={showNews} onClose={() => setShowNews(false)} />
       
-      {/* HEADER FIXO (STICKY) */}
+      {/* Mercado Fechado Toast com Z-Index Máximo */}
+      {marketAlert && (
+        <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-md animate-in slide-in-from-top-10 duration-500">
+          <div className="glass bg-rose-950/60 border border-rose-500/50 p-5 rounded-3xl shadow-[0_0_50px_rgba(244,63,94,0.4)] flex items-center gap-4">
+            <div className="h-12 w-12 shrink-0 bg-rose-500/20 rounded-2xl flex items-center justify-center border border-rose-500/40">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-[10px] md:text-xs font-black text-rose-100 tracking-wider leading-relaxed">
+              {marketAlert}
+            </p>
+            <button onClick={() => setMarketAlert(null)} className="text-rose-500 hover:text-white ml-auto">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+               </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      
       <header className="h-20 md:h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/80 backdrop-blur-2xl sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center gap-3">
           <Logo size="sm" hideText />
@@ -274,19 +298,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
               {(signalType === SignalType.FOREX || (signalType === SignalType.BINARY && !isAutoMode)) ? (
                 <button 
                   onClick={triggerSignalGeneration} 
-                  disabled={isScanning || !marketStatus.isOpen}
-                  className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-xl group overflow-hidden relative ${!marketStatus.isOpen ? 'bg-rose-900/40 text-rose-500 border border-rose-500/20 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20'}`}
+                  disabled={isScanning}
+                  className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-xl group overflow-hidden relative ${shake ? 'animate-bounce border-rose-500' : ''} ${!marketStatus.isOpen ? 'bg-rose-900/40 text-rose-500 border border-rose-500/20 cursor-pointer' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20'}`}
                 >
                   <span className="relative z-10">
                     {!marketStatus.isOpen ? 'MERCADO FECHADO' : (isScanning ? scanningText : 'GERAR ANÁLISE ULTRA')}
                   </span>
                   {marketStatus.isOpen && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>}
+                  {!marketStatus.isOpen && !isScanning && <div className="absolute inset-0 bg-rose-500/5 animate-pulse"></div>}
                 </button>
               ) : (
                 <div className="space-y-3">
-                  <div className={`text-center py-5 rounded-2xl border ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                  <div 
+                    onClick={triggerSignalGeneration}
+                    className={`text-center py-5 rounded-2xl border cursor-pointer transition-all active:scale-95 ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}
+                  >
                     <p className={`text-[8px] font-black uppercase tracking-widest ${!marketStatus.isOpen ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`}>
-                      {!marketStatus.isOpen ? 'MERCADO FECHADO' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
+                      {!marketStatus.isOpen ? 'MERCADO FECHADO (CLIQUE P/ INFO)' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
                     </p>
                   </div>
                   
@@ -295,7 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                     className="w-full py-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-white/10 group"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002-2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002-2z" />
                     </svg>
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white">Calendário Econômico</span>
                   </button>
@@ -323,9 +351,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">
-                  {!marketStatus.isOpen ? 'Aguardando Abertura do Mercado' : 'Aguardando Quebra de Movimento'}
-                </p>
+                <div className="space-y-2">
+                  <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">
+                    {!marketStatus.isOpen ? 'MERCADO REAL ATUALMENTE FECHADO' : 'Aguardando Quebra de Movimento'}
+                  </p>
+                  {!marketStatus.isOpen && (
+                    <p className="text-rose-500/60 font-black uppercase tracking-widest text-[7px] animate-pulse">
+                      Pregão Real: 04:00 às 16:00
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
