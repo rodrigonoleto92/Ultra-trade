@@ -8,27 +8,26 @@ const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNI
  * Lista de padrões técnicos para variação no modo de contingência
  */
 const TECHNICAL_PATTERNS = [
-  "Identificada quebra de estrutura (CHoCH) com entrada de volume institucional em zona de mitigação. Padrão de impulsão V18 validado para a próxima vela em confluência com o RSI.",
-  "Detectada varredura de liquidez (Liquidity Sweep) abaixo das mínimas anteriores. O preço atingiu um Order Block de H1, indicando reversão iminente por absorção de oferta.",
-  "Formação de Fair Value Gap (FVG) pendente de mitigação. O fluxo de ordens (Order Flow) aponta para um rebalanceamento técnico na zona de 50% da retração de Fibonacci.",
-  "Rompimento de micro-tendência com confirmação de volume acima da média (VSA). Padrão de 4 velas Sniper completado após teste bem-sucedido de suporte dinâmico.",
-  "Saturação de indicadores osciladores em zona de exaustão extrema. Cruzamento de médias exponenciais (EMA) valida a entrada para o próximo ciclo fracionário.",
-  "Identificado padrão harmônico em formação na zona de valor. A rejeição da VWAP diária sugere uma correção técnica forte para busca de liquidez em níveis superiores.",
-  "Padrão de 'Spring' (Wyckoff) identificado após acumulação lateral. Aumento súbito de agressão no Book de Ofertas confirma a direção institucional do movimento.",
-  "Zona de Supply/Demand testada pela terceira vez com redução de momentum. Divergência positiva no histograma do MACD sinaliza entrada de alta probabilidade."
+  "Identificada quebra de estrutura (CHoCH) com entrada de volume institucional em zona de mitigação. O preço trabalha acima da EMA 10 e EMA 20, confirmando força compradora no pullback.",
+  "Detectada varredura de liquidez (Liquidity Sweep) abaixo das mínimas anteriores. O cruzamento das Médias Móveis Exponenciais (EMA 10 cruzando EMA 20 para cima) valida a reversão Sniper V18.",
+  "Formação de Fair Value Gap (FVG) pendente de mitigação. O alinhamento das médias EMA 10 e EMA 20 indica uma tendência de exaustão, favorecendo a entrada na retração de Fibonacci.",
+  "Rompimento de micro-tendência com confirmação de volume (VSA). O preço encontrou suporte dinâmico na EMA 20, enquanto a EMA 10 aponta para uma aceleração imediata do movimento.",
+  "Saturação de indicadores osciladores em zona de exaustão extrema. O distanciamento (gap) entre o preço e a EMA 20 sugere um retorno à média, validado pela inclinação da EMA 10.",
+  "Identificado padrão harmônico em formação na zona de valor. A rejeição da VWAP diária em confluência com a barreira técnica da EMA 20 sinaliza uma reversão de alta probabilidade.",
+  "Padrão de 'Spring' (Wyckoff) identificado após acumulação lateral. O preço recuperou a posição acima das médias EMA 10 e 20, confirmando o início da fase de markup institucional.",
+  "Zona de Supply/Demand testada com redução de momentum. O estreitamento entre a EMA 10 e EMA 20 indica uma compressão de volatilidade prestes a explodir na direção do sinal."
 ];
 
 const OTC_PATTERNS = [
-  "Detectada exaustão no algoritmo de fluxo OTC após ciclo de 5 velas seguidas. O padrão Sniper de 4 velas indica reversão técnica iminente por saturação.",
-  "Identificada repetição de ciclo algorítmico de tendência. O fluxo sintético apresenta comportamento de 'Price Action Mirror', favorecendo a continuidade do movimento.",
-  "Algoritmo da plataforma sinaliza correção de vácuo de preço após movimentação parabólica. Zona de interesse identificada por densidade de ordens sintéticas.",
-  "Padrão de reversão por exaustão volumétrica no fluxo OTC. A leitura de 'Time and Sales' simulada indica perda de força na ponta agressora."
+  "Detectada exaustão no algoritmo de fluxo OTC. O preço rompeu a EMA 10 de forma agressiva após ciclo de 5 velas, indicando reversão técnica validada pela média de 20 períodos.",
+  "Identificada repetição de ciclo algorítmico de tendência. O fluxo sintético respeita a EMA 20 como trilho de suporte, favorecendo o 'Price Action Mirror' na EMA 10.",
+  "Algoritmo da plataforma sinaliza correção de vácuo de preço. A inclinação negativa das médias EMA 10 e EMA 20 confirma a pressão vendedora em níveis sintéticos.",
+  "Padrão de reversão por exaustão volumétrica no fluxo OTC. O fechamento do candle atual abaixo da EMA 10 sinaliza a quebra do ciclo parabólico anterior."
 ];
 
 const getRandomJustification = (isOTC: boolean) => {
   const pool = isOTC ? OTC_PATTERNS : TECHNICAL_PATTERNS;
   const base = pool[Math.floor(Math.random() * pool.length)];
-  // Adiciona um sufixo dinâmico para evitar textos idênticos
   const suffixes = [
     " Aguarde o fechamento do candle atual.",
     " Entrada recomendada com gerenciamento 2x1.",
@@ -96,7 +95,6 @@ export async function generateSignal(
 
 /**
  * MOTOR DE INTELIGÊNCIA UNIFICADO (SNIPER QUANTUM V18)
- * Reforçado para gerar justificativas extremamente detalhadas sem citar nomes de corretoras.
  */
 async function analyzeMarketStructure(
   pair: string,
@@ -116,19 +114,19 @@ async function analyzeMarketStructure(
 
                     SUA TAREFA É GERAR UM SINAL COM UMA JUSTIFICATIVA TÉCNICA RICA, ÚNICA E PROFISSIONAL.
                     
-                    DIVERSIDADE TÉCNICA (IMPORTANTE):
-                    Varie suas análises entre SMC (Smart Money Concepts), ICT, Wyckoff ou Price Action Clássico.
-                    Nunca repita a mesma frase. Analise o contexto atual do par informado.
+                    REQUISITO ADICIONAL OBRIGATÓRIO (CONFLUÊNCIA):
+                    Inclua na sua análise a leitura das Médias Móveis Exponenciais de 10 e 20 períodos (EMA 10 e EMA 20). 
+                    Verifique se o preço está acima/abaixo delas, se houve cruzamento ou se serviram de suporte/resistência dinâmica.
 
                     REGRAS OBRIGATÓRIAS PARA O 'REASONING':
-                    1. Use termos específicos: "Order Block", "FVG", "Liquidity Sweep", "CHoCH", "BOS", "Mitigation Zone", "Bearish/Bullish Engulfing".
-                    2. Explique o Padrão das Velas recentes: Mencione pavios, rejeições ou volume.
-                    3. Se for OTC: Fale de "Ciclos de Algoritmo", "Exaustão de Fluxo Sintético", "Repetição de Padrão Temporal", mas sem citar nomes de corretoras.
+                    1. Use termos específicos: "Order Block", "FVG", "CHoCH", "EMA 10", "EMA 20", "Golden Cross", "Death Cross", "Rejeição de Média".
+                    2. Explique como as EMAs 10 e 20 estão auxiliando na confirmação do sinal.
+                    3. Se for OTC: Fale de "Ciclos de Algoritmo" em confluência com as médias sintéticas.
                     4. O texto deve soar como um trader profissional operando ao vivo.
 
                     ESTRATÉGIA BASE:
-                    - CALL: Rejeição de Suporte / Quebra de Estrutura de Baixa para Alta.
-                    - PUT: Rejeição de Resistência / Quebra de Estrutura de Alta para Baixa.
+                    - CALL: Preço recuperando médias ou cruzamento de alta (EMA 10 p/ cima da EMA 20).
+                    - PUT: Preço perdendo médias ou cruzamento de baixa (EMA 10 p/ baixo da EMA 20).
 
                     FORMATO DE RESPOSTA JSON:
                     {
