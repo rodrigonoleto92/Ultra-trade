@@ -38,7 +38,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] font-black text-slate-300 uppercase tracking-tighter">
-                OPÇÕES SNIPER
+                {isForex ? 'ANALYSIS PRO' : 'OPÇÕES SNIPER'}
               </span>
               <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
             </div>
@@ -77,16 +77,38 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
-            <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Início</span>
-            <span className="text-sm md:text-lg font-mono font-black text-white">{signal.entryTime}</span>
+        {/* Substituição dinâmica: Tempo para Binárias / Gestão para Forex */}
+        {isForex ? (
+          <div className="grid grid-cols-1 gap-3 mb-5">
+            <div className="bg-blue-600/10 p-4 md:p-5 rounded-2xl border border-blue-500/30 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-2 mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em]">Gestão de Risco Recomendada</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs md:text-sm text-white font-bold">
+                  STOP: <span className="text-rose-400 font-black">{isCall ? 'Abaixo do Último Fundo' : 'Acima do Último Topo'}</span>
+                </p>
+                <p className="text-xs md:text-sm text-white font-bold">
+                  ALVO: <span className="text-emerald-400 font-black">2x o Tamanho do Stop (Ratio 2:1)</span>
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
-            <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Expiração</span>
-            <span className="text-sm md:text-lg font-mono font-black text-white">{isForex ? 'TAKE PROFIT' : signal.expirationTime}</span>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+              <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Início</span>
+              <span className="text-sm md:text-lg font-mono font-black text-white">{signal.entryTime}</span>
+            </div>
+            <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+              <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Expiração</span>
+              <span className="text-sm md:text-lg font-mono font-black text-white">{signal.expirationTime}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mb-5 space-y-2">
           <div className="flex justify-between text-[8px] font-black uppercase tracking-widest px-1">
