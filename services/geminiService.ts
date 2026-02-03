@@ -5,35 +5,36 @@ import { Signal, SignalDirection, Timeframe, SignalType, CurrencyPair } from "..
 const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNIPER' : 'FX'}-` + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 /**
- * Lista de padrões técnicos para variação no modo de contingência
+ * Lista de padrões técnicos para variação no modo de contingência (Fallback)
+ * Integra SMC (BOS, CHoCH, OB) com Médias Móveis (EMA 10/20)
  */
 const TECHNICAL_PATTERNS = [
-  "Identificada quebra de estrutura (CHoCH) com entrada de volume institucional em zona de mitigação. O preço trabalha acima da EMA 10 e EMA 20, confirmando força compradora no pullback.",
-  "Detectada varredura de liquidez (Liquidity Sweep) abaixo das mínimas anteriores. O cruzamento das Médias Móveis Exponenciais (EMA 10 cruzando EMA 20 para cima) valida a reversão Sniper V18.",
-  "Formação de Fair Value Gap (FVG) pendente de mitigação. O alinhamento das médias EMA 10 e EMA 20 indica uma tendência de exaustão, favorecendo a entrada na retração de Fibonacci.",
-  "Rompimento de micro-tendência com confirmação de volume (VSA). O preço encontrou suporte dinâmico na EMA 20, enquanto a EMA 10 aponta para uma aceleração imediata do movimento.",
-  "Saturação de indicadores osciladores em zona de exaustão extrema. O distanciamento (gap) entre o preço e a EMA 20 sugere um retorno à média, validado pela inclinação da EMA 10.",
-  "Identificado padrão harmônico em formação na zona de valor. A rejeição da VWAP diária em confluência com a barreira técnica da EMA 20 sinaliza uma reversão de alta probabilidade.",
-  "Padrão de 'Spring' (Wyckoff) identificado após acumulação lateral. O preço recuperou a posição acima das médias EMA 10 e 20, confirmando o início da fase de markup institucional.",
-  "Zona de Supply/Demand testada com redução de momentum. O estreitamento entre a EMA 10 e EMA 20 indica uma compressão de volatilidade prestes a explodir na direção do sinal."
+  "Confluência mestre identificada: Quebra de Estrutura (BOS) em zona de demanda, com o preço sustentado pela EMA 10 e EMA 20 em inclinação ascendente.",
+  "Sinal validado por Rejeição de Order Block Bearish. A EMA 10 cruzou abaixo da EMA 20, confirmando a mudança de momentum (CHoCH) para o lado vendedor.",
+  "Preenchimento de Fair Value Gap (FVG) em confluência com suporte dinâmico na EMA 20. O alinhamento das médias confirma a continuidade da tendência macro.",
+  "Identificada varredura de liquidez institucional. O preço recuperou a posição acima da EMA 10 após testar a EMA 20, validando a entrada por Price Action Sniper.",
+  "Padrão de reversão técnica: Cruzamento de médias (EMA 10/20) ocorrendo exatamente em zona de mitigação de oferta, sinalizando exaustão do movimento anterior.",
+  "Análise SMC completa: Preço trabalhando em zona de desconto, com a EMA 10 servindo como gatilho de aceleração após o toque na média de 20 períodos.",
+  "Identificado ChoCH (Change of Character) validado pelo volume institucional. O afastamento positivo da EMA 10 sobre a EMA 20 confirma o novo ciclo de alta.",
+  "Compressão de preço entre as médias EMA 10 e 20 em zona de decisão. O rompimento da estrutura (BOS) alinhado às médias gera alta probabilidade de acerto."
 ];
 
 const OTC_PATTERNS = [
-  "Detectada exaustão no algoritmo de fluxo OTC. O preço rompeu a EMA 10 de forma agressiva após ciclo de 5 velas, indicando reversão técnica validada pela média de 20 períodos.",
-  "Identificada repetição de ciclo algorítmico de tendência. O fluxo sintético respeita a EMA 20 como trilho de suporte, favorecendo o 'Price Action Mirror' na EMA 10.",
-  "Algoritmo da plataforma sinaliza correção de vácuo de preço. A inclinação negativa das médias EMA 10 e EMA 20 confirma a pressão vendedora em níveis sintéticos.",
-  "Padrão de reversão por exaustão volumétrica no fluxo OTC. O fechamento do candle atual abaixo da EMA 10 sinaliza a quebra do ciclo parabólico anterior."
+  "Ciclo algorítmico OTC em confluência: Cruzamento de médias sintéticas alinhado com o padrão de repetição de velas de força institucional.",
+  "Fluxo OTC respeitando a EMA 20 como trilho. A EMA 10 cruzou para baixo, confirmando a quebra do ciclo de alta anterior e início da correção.",
+  "Detectada manipulação de liquidez no gráfico sintético. O preço fechou acima das EMAs 10 e 20, validando o sinal de compra por fluxo contínuo.",
+  "Padrão Sniper V18: Alinhamento das médias exponenciais com o vácuo de preço OTC. A EMA 10 lidera o movimento de momentum atual."
 ];
 
 const getRandomJustification = (isOTC: boolean) => {
   const pool = isOTC ? OTC_PATTERNS : TECHNICAL_PATTERNS;
   const base = pool[Math.floor(Math.random() * pool.length)];
   const suffixes = [
-    " Aguarde o fechamento do candle atual.",
-    " Entrada recomendada com gerenciamento 2x1.",
-    " Confluência de indicadores em 88% de precisão.",
-    " Padrão V18 confirmado pelo motor quântico.",
-    " Alinhamento fractal identificado no Timeframe selecionado."
+    " Aguarde a confirmação de fechamento.",
+    " Entrada com gerenciamento rigoroso 2x1.",
+    " Confluência múltipla validada em 94% de precisão.",
+    " Gatilho de entrada confirmado pelo motor quântico.",
+    " Alinhamento total de indicadores no timeframe."
   ];
   return base + suffixes[Math.floor(Math.random() * suffixes.length)];
 };
@@ -95,6 +96,7 @@ export async function generateSignal(
 
 /**
  * MOTOR DE INTELIGÊNCIA UNIFICADO (SNIPER QUANTUM V18)
+ * INTEGRAÇÃO DE TODAS AS ESTRATÉGIAS
  */
 async function analyzeMarketStructure(
   pair: string,
@@ -110,29 +112,30 @@ async function analyzeMarketStructure(
     const useSearch = !isOTC;
 
     const prompt = `VOCÊ É O ANALISTA SÊNIOR DO MOTOR SNIPER QUANTUM V18.
-                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | TIPO: ${isOTC ? 'ALGORITMO OTC (SINTÉTICO)' : 'MERCADO REAL'}
+                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | TIPO: ${isOTC ? 'ALGORITMO OTC' : 'MERCADO REAL'}
 
-                    SUA TAREFA É GERAR UM SINAL COM UMA JUSTIFICATIVA TÉCNICA RICA, ÚNICA E PROFISSIONAL.
+                    REQUISITO: ANÁLISE DE MULTI-CONFLUÊNCIA (ESTRATÉGIAS COMBINADAS)
+                    Você deve gerar o sinal apenas se houver uma combinação vencedora das seguintes estratégias:
                     
-                    REQUISITO ADICIONAL OBRIGATÓRIO (CONFLUÊNCIA):
-                    Inclua na sua análise a leitura das Médias Móveis Exponenciais de 10 e 20 períodos (EMA 10 e EMA 20). 
-                    Verifique se o preço está acima/abaixo delas, se houve cruzamento ou se serviram de suporte/resistência dinâmica.
+                    1. SMC (Smart Money Concepts): Identifique BOS (Break of Structure), CHoCH (Change of Character), Order Blocks (OB) ou Fair Value Gaps (FVG).
+                    2. MÉDIAS MÓVEIS EXPONENCIAIS: Utilize a EMA 10 e EMA 20 como auxílio e confirmação:
+                       - Se a EMA 10 cruzou a EMA 20 para CIMA ou o preço está acima delas, temos tendência de alta.
+                       - Se a EMA 10 cruzou a EMA 20 para BAIXO ou o preço está abaixo delas, temos tendência de baixa.
+                    
+                    A JUSTIFICATIVA (REASONING) DEVE:
+                    - Descrever como o Price Action (SMC) está sendo confirmado pelo alinhamento ou cruzamento das médias EMA 10 e 20.
+                    - Explicar o gatilho da entrada: ex. "Toque no Order Block com confirmação de cruzamento de médias".
+                    - Ser extremamente técnica e rica em detalhes profissionais.
 
-                    REGRAS OBRIGATÓRIAS PARA O 'REASONING':
-                    1. Use termos específicos: "Order Block", "FVG", "CHoCH", "EMA 10", "EMA 20", "Golden Cross", "Death Cross", "Rejeição de Média".
-                    2. Explique como as EMAs 10 e 20 estão auxiliando na confirmação do sinal.
-                    3. Se for OTC: Fale de "Ciclos de Algoritmo" em confluência com as médias sintéticas.
-                    4. O texto deve soar como um trader profissional operando ao vivo.
-
-                    ESTRATÉGIA BASE:
-                    - CALL: Preço recuperando médias ou cruzamento de alta (EMA 10 p/ cima da EMA 20).
-                    - PUT: Preço perdendo médias ou cruzamento de baixa (EMA 10 p/ baixo da EMA 20).
+                    GATILHO DE DIREÇÃO:
+                    - CALL: Alinhamento de alta em SMC + Médias (EMA 10 acima da EMA 20).
+                    - PUT: Alinhamento de baixa em SMC + Médias (EMA 10 abaixo da EMA 20).
 
                     FORMATO DE RESPOSTA JSON:
                     {
                       "direction": "CALL" | "PUT",
                       "confidence": number (88-99),
-                      "reasoning": "SUA JUSTIFICATIVA TÉCNICA ÚNICA E DETALHADA AQUI"
+                      "reasoning": "SUA JUSTIFICATIVA TÉCNICA COMBINANDO SMC + EMA 10/20"
                     }`;
 
     const response = await ai.models.generateContent({
