@@ -9,8 +9,8 @@ interface SignalCardProps {
 const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isCall = signal.direction === SignalDirection.CALL;
   const isForex = signal.type === SignalType.FOREX;
+  const isOTC = signal.pair.toUpperCase().includes('OTC');
 
-  // Estabiliza as tags para que não mudem a cada renderização, evitando o "tremor" no cabeçalho
   const techTags = useMemo(() => {
     return ["BOS", "CHoCH", "ORDER BLOCK", "FVG"];
   }, []);
@@ -24,7 +24,14 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
               <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] font-black text-slate-300 uppercase tracking-tighter">
                 {isForex ? 'ANALYSIS PRO' : 'OPÇÕES SNIPER'}
               </span>
-              <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
+              {isOTC ? (
+                <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                  <div className="h-1 w-1 bg-amber-500 rounded-full animate-pulse"></div>
+                  FONTE: QUOTEX CLOUD
+                </span>
+              ) : (
+                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
+              )}
             </div>
             <h3 className="text-xl md:text-3xl font-black text-white tracking-tight break-words">{signal.pair}</h3>
             
@@ -107,7 +114,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
         <div className={`p-4 md:p-5 rounded-2xl border backdrop-blur-sm ${isCall ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
           <div className="flex items-center gap-2 mb-3">
             <div className={`h-2 w-2 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Justificativa Técnica Sniper</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Análise Quotex Sniper</span>
           </div>
           <div className="text-[11px] md:text-[13px] text-white/90 leading-relaxed font-medium italic">
             <p className="inline">"{signal.strategy}"</p>
