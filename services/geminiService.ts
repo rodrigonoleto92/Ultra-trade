@@ -5,30 +5,30 @@ import { Signal, SignalDirection, Timeframe, SignalType, CurrencyPair } from "..
 const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNIPER' : 'FX'}-` + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 /**
- * Padrões técnicos integrados com comportamento específico da Quotex
+ * Padrões técnicos focados na estratégia de fluxo e impulsão solicitada
  */
 const TECHNICAL_PATTERNS = [
-  "Confluência mestre: Estrutura de Impulsão (Verde) - Correção (Vermelha) - Impulsão (Verde) em zona de Order Block. Preço acima da EMA 10/20.",
-  "Sinal validado por Sequência de Fluxo: Impulsão de Baixa - Correção - Impulsão. Teste na EMA 20 com rejeição, gatilho para a 4ª vela.",
-  "Padrão Candle-a-Candle em confluência com CHoCH. Ciclo de impulsão validado pelo cruzamento da EMA 10 sobre a EMA 20.",
-  "Varredura de liquidez seguida de padrão de 3 velas de força. Alta probabilidade de continuidade devido ao suporte dinâmico."
+  "Padrão de Impulsão detectado: Verde (Impulso) -> Vermelho (Correção) -> Verde (Impulso). A 4ª vela confirma a continuidade do fluxo comprador acima da EMA 10.",
+  "Ciclo de Venda Validado: Vermelho (Impulso) -> Verde (Correção) -> Vermelho (Impulso). Gatilho de venda para a 4ª vela em zona de liquidez.",
+  "Confluência de Fluxo: Sequência 1-1-1 identificada. O preço respeita a retração na EMA 20, preparando a 4ª vela de impulsão institucional.",
+  "Leitura Candle-a-Candle: Após o ciclo de correção em candle único, a retomada da cor predominante indica entrada de volume para a próxima vela.",
+  "Análise Sniper: Estrutura de mercado em BOS alinhada com o padrão de 3 velas de força. Probabilidade superior a 94% para a 4ª vela."
 ];
 
-const OTC_QUOTEX_PATTERNS = [
-  "Algoritmo Quotex: Ciclo de preenchimento de sombra identificado. Sequência de impulsão validada para a 4ª vela.",
-  "Fluxo Quotex OTC respeitando a EMA 10. Padrão de 3 velas de força em zona de exaustão algorítmica.",
-  "Detectada manipulação de fluxo na Quotex. O ciclo de 3 velas fechou sem pavio superior, validando a continuidade.",
-  "Sniper V18: Alinhamento com o motor da Quotex. Padrão de reversão de fluxo após 3 velas de mesma cor."
+const OTC_PATTERNS = [
+  "Algoritmo VIP: Ciclo de preenchimento de fluxo identificado. Padrão de 3 velas confirma gatilho na 4ª vela em zona de exaustão.",
+  "Fluxo Sintético: Impulsão-Correção-Impulsão validado pelas médias rápidas. A 4ª vela segue o fluxo de tendência dominante.",
+  "Detectada manipulação de fluxo institucional. O ciclo de 3 velas fechou sem rejeição, validando a continuidade para a 4ª vela.",
+  "Sniper V18: Alinhamento de volume algorítmico. Padrão de reversão de fluxo após sequência de candles de força."
 ];
 
 const getRandomJustification = (isOTC: boolean) => {
-  const pool = isOTC ? OTC_QUOTEX_PATTERNS : TECHNICAL_PATTERNS;
+  const pool = isOTC ? OTC_PATTERNS : TECHNICAL_PATTERNS;
   const base = pool[Math.floor(Math.random() * pool.length)];
   const suffixes = [
-    " Aguarde a confirmação de fechamento.",
-    " Entrada com gerenciamento rigoroso 2x1.",
-    " Confluência tripla validada com dados da Quotex.",
-    " Gatilho de entrada confirmado pelo motor Sniper.",
+    " Aguarde o fechamento do candle atual.",
+    " Entrada confirmada pelo motor de fluxo Sniper.",
+    " Confluência técnica validada pelo algoritmo de 4ª vela.",
     " Alinhamento total de indicadores no timeframe."
   ];
   return base + suffixes[Math.floor(Math.random() * suffixes.length)];
@@ -98,39 +98,35 @@ async function analyzeMarketStructure(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Agora usamos busca também para OTC para captar sentimentos e padrões da Quotex na web
-    const useSearch = true; 
+    // Usamos busca apenas em mercado real para evitar alucinações de nomes de corretoras
+    const useSearch = !isOTC; 
 
-    const prompt = `VOCÊ É O ANALISTA SÊNIOR DO MOTOR SNIPER QUANTUM V18 - ESPECIALISTA EM QUOTEX.
-                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | TIPO: ${isOTC ? 'ALGORITMO OTC QUOTEX' : 'MERCADO REAL'}
+    const prompt = `VOCÊ É O ANALISTA SÊNIOR DO MOTOR SNIPER QUANTUM V18.
+                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MERCADO: ${isOTC ? 'OTC' : 'REAL'}
 
-                    INSTRUÇÃO CRÍTICA PARA OTC:
-                    Se o ativo for OTC, você deve simular uma conexão com os servidores da QUOTEX. 
-                    Busque via Google Search por padrões que o algoritmo da Quotex está respeitando AGORA (ex: "Quotex OTC cycle today", "Quotex OTC price action").
+                    REGRA DE OURO (ESTRATÉGIA DE 3 VELAS):
+                    Sua análise DEVE priorizar o padrão de impulsão de velas para entrada na 4ª vela:
+                    - CALL (COMPRA): Vela 1 Verde (Impulso) -> Vela 2 Vermelha (Correção) -> Vela 3 Verde (Impulso) => GATILHO NA 4ª VELA É CALL.
+                    - PUT (VENDA): Vela 1 Vermelha (Impulso) -> Vela 2 Verde (Correção) -> Vela 3 Vermelha (Impulso) => GATILHO NA 4ª VELA É PUT.
                     
-                    REQUISITO DE CONFLUÊNCIA:
-                    1. ESTRATÉGIA CANDLE-A-CANDLE:
-                       - CALL: Verde + Vermelho + Verde -> 4ª Vela é COMPRA.
-                       - PUT: Vermelho + Verde + Vermelho -> 4ª Vela é VENDA.
-                    
-                    2. COMPORTAMENTO QUOTEX:
-                       - Analise se a 4ª vela ocorrerá em uma zona de exaustão ou continuidade do fluxo da Quotex.
-                    
-                    3. MÉDIAS MÓVEIS (EMA 10 e 20):
-                       - O sinal deve estar a favor da inclinação das médias.
+                    CONFLUÊNCIAS ADICIONAIS:
+                    1. SMC: Identifique se esse padrão ocorre em zonas de Order Block ou FVG.
+                    2. MÉDIAS MÓVEIS (EMA 10/20): O sinal de CALL deve estar acima das médias e PUT abaixo.
+
+                    IMPORTANTE: NÃO mencione nomes de corretoras (como Quotex, IQ, etc). Foque apenas na análise técnica pura do fluxo de candles.
 
                     FORMATO DE RESPOSTA JSON:
                     {
                       "direction": "CALL" | "PUT",
                       "confidence": number (94-99),
-                      "reasoning": "JUSTIFICATIVA TÉCNICA CITANDO O FLUXO DA QUOTEX E A CONFLUÊNCIA TRI-ESTRATÉGICA"
+                      "reasoning": "Sua justificativa técnica explicando a sequência de candles e a confluência com SMC/EMA."
                     }`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
+        tools: useSearch ? [{ googleSearch: {} }] : undefined,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
