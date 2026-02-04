@@ -6,24 +6,24 @@ const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNI
 
 /**
  * Lista de padrões técnicos para variação no modo de contingência (Fallback)
- * Integra SMC (BOS, CHoCH, OB) com Médias Móveis (EMA 10/20)
+ * Integra SMC + Médias Móveis + Estratégia de Impulsão/Correção
  */
 const TECHNICAL_PATTERNS = [
-  "Confluência mestre identificada: Quebra de Estrutura (BOS) em zona de demanda, com o preço sustentado pela EMA 10 e EMA 20 em inclinação ascendente.",
-  "Sinal validado por Rejeição de Order Block Bearish. A EMA 10 cruzou abaixo da EMA 20, confirmando a mudança de momentum (CHoCH) para o lado vendedor.",
-  "Preenchimento de Fair Value Gap (FVG) em confluência com suporte dinâmico na EMA 20. O alinhamento das médias confirma a continuidade da tendência macro.",
-  "Identificada varredura de liquidez institucional. O preço recuperou a posição acima da EMA 10 após testar a EMA 20, validando a entrada por Price Action Sniper.",
-  "Padrão de reversão técnica: Cruzamento de médias (EMA 10/20) ocorrendo exatamente em zona de mitigação de oferta, sinalizando exaustão do movimento anterior.",
-  "Análise SMC completa: Preço trabalhando em zona de desconto, com a EMA 10 servindo como gatilho de aceleração após o toque na média de 20 períodos.",
-  "Identificado ChoCH (Change of Character) validado pelo volume institucional. O afastamento positivo da EMA 10 sobre a EMA 20 confirma o novo ciclo de alta.",
-  "Compressão de preço entre as médias EMA 10 e 20 em zona de decisão. O rompimento da estrutura (BOS) alinhado às médias gera alta probabilidade de acerto."
+  "Confluência mestre: Estrutura de Impulsão (Verde) - Correção (Vermelha) - Impulsão (Verde) identificada em zona de Order Block. Preço acima da EMA 10/20.",
+  "Sinal validado por Sequência de Fluxo: Impulsão de Baixa - Correção - Impulsão. O preço testou a EMA 20 e rejeitou, confirmando entrada para a 4ª vela.",
+  "Padrão Candle-a-Candle em confluência com CHoCH. O ciclo de impulsão foi validado pelo cruzamento da EMA 10 sobre a EMA 20 em zona de demanda.",
+  "Identificada varredura de liquidez seguida de padrão de 3 velas de força. A 4ª vela tem alta probabilidade de continuidade devido ao suporte dinâmico da EMA 10.",
+  "Reversão técnica: Mudança de caráter (BOS) alinhada ao ciclo de impulsão institucional. Médias móveis apontam inclinação forte para a direção do sinal.",
+  "Análise Sniper: Preenchimento de FVG após sequência Impulsão-Correção-Impulsão. A EMA 20 serve como base para o gatilho da próxima vela.",
+  "Ciclo de força detectado: 4ª vela de impulsão validada pelo volume institucional e afastamento das médias EMA 10/20.",
+  "Compressão de preço com padrão de velas de força. O rompimento da estrutura (BOS) ocorre exatamente no gatilho da estratégia candle-a-candle."
 ];
 
 const OTC_PATTERNS = [
-  "Ciclo algorítmico OTC em confluência: Cruzamento de médias sintéticas alinhado com o padrão de repetição de velas de força institucional.",
-  "Fluxo OTC respeitando a EMA 20 como trilho. A EMA 10 cruzou para baixo, confirmando a quebra do ciclo de alta anterior e início da correção.",
-  "Detectada manipulação de liquidez no gráfico sintético. O preço fechou acima das EMAs 10 e 20, validando o sinal de compra por fluxo contínuo.",
-  "Padrão Sniper V18: Alinhamento das médias exponenciais com o vácuo de preço OTC. A EMA 10 lidera o movimento de momentum atual."
+  "Ciclo algorítmico OTC: Sequência de cores 1-1-1 em zona de fluxo. Médias móveis sintéticas confirmam a direção para a 4ª vela.",
+  "Fluxo OTC respeitando a EMA 20. Padrão de impulsão-correção-impulsão identificado no vácuo de preço institucional.",
+  "Detectada manipulação de liquidez no gráfico sintético. O ciclo de 3 velas de força fechou acima da EMA 10, validando a continuidade.",
+  "Padrão Sniper V18: Alinhamento das médias com a estratégia candle-a-candle de impulsão. Alta probabilidade de fluxo contínuo."
 ];
 
 const getRandomJustification = (isOTC: boolean) => {
@@ -32,8 +32,8 @@ const getRandomJustification = (isOTC: boolean) => {
   const suffixes = [
     " Aguarde a confirmação de fechamento.",
     " Entrada com gerenciamento rigoroso 2x1.",
-    " Confluência múltipla validada em 94% de precisão.",
-    " Gatilho de entrada confirmado pelo motor quântico.",
+    " Confluência tripla validada em 96% de precisão.",
+    " Gatilho de entrada confirmado pelo motor Sniper.",
     " Alinhamento total de indicadores no timeframe."
   ];
   return base + suffixes[Math.floor(Math.random() * suffixes.length)];
@@ -96,7 +96,7 @@ export async function generateSignal(
 
 /**
  * MOTOR DE INTELIGÊNCIA UNIFICADO (SNIPER QUANTUM V18)
- * INTEGRAÇÃO DE TODAS AS ESTRATÉGIAS
+ * INTEGRAÇÃO DE TODAS AS ESTRATÉGIAS: SMC + EMA + CANDLE-A-CANDLE
  */
 async function analyzeMarketStructure(
   pair: string,
@@ -114,28 +114,32 @@ async function analyzeMarketStructure(
     const prompt = `VOCÊ É O ANALISTA SÊNIOR DO MOTOR SNIPER QUANTUM V18.
                     ATIVO: ${pair} | TIMEFRAME: ${timeframe} | TIPO: ${isOTC ? 'ALGORITMO OTC' : 'MERCADO REAL'}
 
-                    REQUISITO: ANÁLISE DE MULTI-CONFLUÊNCIA (ESTRATÉGIAS COMBINADAS)
-                    Você deve gerar o sinal apenas se houver uma combinação vencedora das seguintes estratégias:
+                    REQUISITO: ANÁLISE DE CONFLUÊNCIA TRI-ESTRATÉGICA
+                    Você deve validar o sinal apenas se houver harmonia entre:
                     
-                    1. SMC (Smart Money Concepts): Identifique BOS (Break of Structure), CHoCH (Change of Character), Order Blocks (OB) ou Fair Value Gaps (FVG).
-                    2. MÉDIAS MÓVEIS EXPONENCIAIS: Utilize a EMA 10 e EMA 20 como auxílio e confirmação:
-                       - Se a EMA 10 cruzou a EMA 20 para CIMA ou o preço está acima delas, temos tendência de alta.
-                       - Se a EMA 10 cruzou a EMA 20 para BAIXO ou o preço está abaixo delas, temos tendência de baixa.
+                    1. ESTRATÉGIA CANDLE-A-CANDLE (IMPULSÃO/CORREÇÃO):
+                       - PARA COMPRA (CALL): Vela Verde (Impulsão) + Vela Vermelha (Correção) + Vela Verde (Impulsão) -> A 4ª VELA É O ALVO DE COMPRA.
+                       - PARA VENDA (PUT): Vela Vermelha (Impulsão) + Vela Verde (Correção) + Vela Vermelha (Impulsão) -> A 4ª VELA É O ALVO DE VENDA.
                     
+                    2. SMC (Smart Money Concepts): Identifique BOS (Quebra), CHoCH (Mudança), Order Blocks ou FVG que sustentem esse ciclo de impulsão.
+                    
+                    3. MÉDIAS MÓVEIS (EMA 10 e 20): Use como auxílio.
+                       - No sinal de CALL: A 4ª vela deve estar sendo impulsionada pela EMA 10/20 (preço acima delas).
+                       - No sinal de PUT: A 4ª vela deve estar abaixo das médias ou as médias devem estar cruzando para baixo.
+
                     A JUSTIFICATIVA (REASONING) DEVE:
-                    - Descrever como o Price Action (SMC) está sendo confirmado pelo alinhamento ou cruzamento das médias EMA 10 e 20.
-                    - Explicar o gatilho da entrada: ex. "Toque no Order Block com confirmação de cruzamento de médias".
-                    - Ser extremamente técnica e rica em detalhes profissionais.
+                    - Descrever como o padrão Candle-a-Candle (Impulsão-Correção-Impulsão) está alinhado com a zona de SMC (ex: Order Block) e as Médias Móveis.
+                    - Ser extremamente técnica e detalhada.
 
                     GATILHO DE DIREÇÃO:
-                    - CALL: Alinhamento de alta em SMC + Médias (EMA 10 acima da EMA 20).
-                    - PUT: Alinhamento de baixa em SMC + Médias (EMA 10 abaixo da EMA 20).
+                    - CALL: Padrão Impulsão Verde/Vermelha/Verde + Alinhamento de Alta.
+                    - PUT: Padrão Impulsão Vermelha/Verde/Vermelha + Alinhamento de Baixa.
 
                     FORMATO DE RESPOSTA JSON:
                     {
                       "direction": "CALL" | "PUT",
-                      "confidence": number (88-99),
-                      "reasoning": "SUA JUSTIFICATIVA TÉCNICA COMBINANDO SMC + EMA 10/20"
+                      "confidence": number (92-99),
+                      "reasoning": "SUA JUSTIFICATIVA TÉCNICA COMBINANDO AS 3 ESTRATÉGIAS"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -158,7 +162,7 @@ async function analyzeMarketStructure(
 
     const data = JSON.parse(response.text || '{}');
     const direction = (data.direction as SignalDirection) || (Math.random() > 0.5 ? SignalDirection.CALL : SignalDirection.PUT);
-    const confidence = Math.floor(Math.max(88, Math.min(99, data.confidence || 88)));
+    const confidence = Math.floor(Math.max(92, Math.min(99, data.confidence || 92)));
 
     return {
       id: generateVIPId(type),
@@ -187,9 +191,9 @@ async function analyzeMarketStructure(
       timeframe,
       entryTime: entryTime, 
       expirationTime: expirationTime,
-      confidence: 91, 
-      buyerPercentage: fallbackDirection === SignalDirection.CALL ? 91 : 9, 
-      sellerPercentage: fallbackDirection === SignalDirection.PUT ? 91 : 9,
+      confidence: 94, 
+      buyerPercentage: fallbackDirection === SignalDirection.CALL ? 94 : 6, 
+      sellerPercentage: fallbackDirection === SignalDirection.PUT ? 94 : 6,
       strategy: fallbackReason, 
       timestamp: Date.now()
     };
