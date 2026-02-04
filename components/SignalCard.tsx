@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Signal, SignalDirection, SignalType } from '../types';
 
 interface SignalCardProps {
@@ -10,26 +10,10 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isCall = signal.direction === SignalDirection.CALL;
   const isForex = signal.type === SignalType.FOREX;
 
-  const [dynamicBuyer, setDynamicBuyer] = useState(signal.buyerPercentage);
-  const [dynamicSeller, setDynamicSeller] = useState(signal.sellerPercentage);
-
-  useEffect(() => {
-    setDynamicBuyer(signal.buyerPercentage);
-    setDynamicSeller(signal.sellerPercentage);
-
-    const interval = setInterval(() => {
-      setDynamicBuyer(prev => {
-        const drift = (Math.random() - 0.5) * 1.5;
-        const newVal = Math.min(Math.max(prev + drift, 5), 95);
-        setDynamicSeller(100 - newVal);
-        return newVal;
-      });
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [signal.id, signal.buyerPercentage, signal.sellerPercentage]);
-
-  const techTags = ["BOS", "CHoCH", "Order Block", "FVG"].filter(() => Math.random() > 0.4);
+  // Estabiliza as tags para que não mudem a cada renderização, evitando o "tremor" no cabeçalho
+  const techTags = useMemo(() => {
+    return ["BOS", "CHoCH", "ORDER BLOCK", "FVG"];
+  }, []);
 
   return (
     <div className={`glass rounded-[24px] md:rounded-[32px] overflow-hidden border-t-4 md:border-t-0 md:border-l-8 ${isCall ? 'border-emerald-500' : 'border-rose-500'} shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-700 w-full`}>
@@ -53,7 +37,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
           <div className="text-right shrink-0">
             <div className={`text-[9px] md:text-[11px] font-black px-3 py-1.5 rounded-xl border whitespace-nowrap ${signal.confidence > 90 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
-              {Math.floor(signal.confidence)}% <span className="opacity-50">ACERTIVIDADE</span>
+              {Math.floor(signal.confidence)}% <span className="opacity-50">ASSERTIVIDADE</span>
             </div>
           </div>
         </div>
@@ -77,10 +61,9 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
         </div>
 
-        {/* Substituição dinâmica: Tempo para Binárias / Gestão para Forex */}
         {isForex ? (
           <div className="grid grid-cols-1 gap-3 mb-5">
-            <div className="bg-blue-600/10 p-4 md:p-5 rounded-2xl border border-blue-500/30 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="bg-blue-600/10 p-4 md:p-5 rounded-2xl border border-blue-500/30 flex flex-col items-center justify-center text-center">
               <div className="flex items-center gap-2 mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -116,8 +99,8 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
             <span className={!isCall ? 'text-rose-400' : 'text-slate-500'}>Volume de Venda</span>
           </div>
           <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden flex border border-white/5">
-            <div className="h-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all duration-1000 ease-out" style={{ width: `${dynamicBuyer}%` }}></div>
-            <div className="h-full bg-rose-500 shadow-[0_0_10px_#ef4444] transition-all duration-1000 ease-out" style={{ width: `${dynamicSeller}%` }}></div>
+            <div className="h-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all duration-700" style={{ width: `${signal.buyerPercentage}%` }}></div>
+            <div className="h-full bg-rose-500 shadow-[0_0_10px_#ef4444] transition-all duration-700" style={{ width: `${signal.sellerPercentage}%` }}></div>
           </div>
         </div>
 
@@ -134,19 +117,19 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
             <div className="flex flex-col items-center">
               <span className="text-[7px] text-slate-600 font-black uppercase">Volatilidade</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '92%' }}></div>
+                <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '92%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-[7px] text-slate-600 font-black uppercase">Tendência</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-1000 ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '88%' }}></div>
+                <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '88%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-[7px] text-slate-600 font-black uppercase">Volume</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: '75%' }}></div>
+                <div className="h-full bg-blue-500" style={{ width: '75%' }}></div>
               </div>
             </div>
           </div>
