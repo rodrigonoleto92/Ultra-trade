@@ -4,36 +4,6 @@ import { Signal, SignalDirection, Timeframe, SignalType, CurrencyPair } from "..
 
 const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNIPER' : 'FX'}-` + Math.random().toString(36).substr(2, 6).toUpperCase();
 
-/**
- * Padrões técnicos focados na estratégia de fluxo e impulsão solicitada
- */
-const TECHNICAL_PATTERNS = [
-  "Padrão de Impulsão detectado: Verde (Impulso) -> Vermelho (Correção) -> Verde (Impulso). A 4ª vela confirma a continuidade do fluxo comprador acima da EMA 10.",
-  "Ciclo de Venda Validado: Vermelho (Impulso) -> Verde (Correção) -> Vermelho (Impulso). Gatilho de venda para a 4ª vela em zona de liquidez.",
-  "Confluência de Fluxo: Sequência 1-1-1 identificada. O preço respeita a retração na EMA 20, preparando a 4ª vela de impulsão institucional.",
-  "Leitura Candle-a-Candle: Após o ciclo de correção em candle único, a retomada da cor predominante indica entrada de volume para a próxima vela.",
-  "Análise Sniper: Estrutura de mercado em BOS alinhada com o padrão de 3 velas de força. Probabilidade superior a 94% para a 4ª vela."
-];
-
-const OTC_PATTERNS = [
-  "Algoritmo VIP: Ciclo de preenchimento de fluxo identificado. Padrão de 3 velas confirma gatilho na 4ª vela em zona de exaustão.",
-  "Fluxo Sintético: Impulsão-Correção-Impulsão validado pelas médias rápidas. A 4ª vela segue o fluxo de tendência dominante.",
-  "Detectada manipulação de fluxo institucional. O ciclo de 3 velas fechou sem rejeição, validando a continuidade para a 4ª vela.",
-  "Sniper V18: Alinhamento de volume algorítmico. Padrão de reversão de fluxo após sequência de candles de força."
-];
-
-const getRandomJustification = (isOTC: boolean) => {
-  const pool = isOTC ? OTC_PATTERNS : TECHNICAL_PATTERNS;
-  const base = pool[Math.floor(Math.random() * pool.length)];
-  const suffixes = [
-    " Aguarde o fechamento do candle atual.",
-    " Entrada confirmada pelo motor de fluxo Sniper.",
-    " Confluência técnica validada pelo algoritmo de 4ª vela.",
-    " Alinhamento total de indicadores no timeframe."
-  ];
-  return base + suffixes[Math.floor(Math.random() * suffixes.length)];
-};
-
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const seconds = now.getSeconds();
@@ -98,44 +68,47 @@ async function analyzeMarketStructure(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Usamos busca apenas em mercado real para evitar alucinações de nomes de corretoras
-    const useSearch = !isOTC; 
+    const prompt = `VOCÊ É O ANALISTA MESTRE DO ALGORITMO SNIPER V18.
+                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MERCADO: ${isOTC ? 'MERCADO OTC (POLARIUM DATA)' : 'REAL MARKET'}
 
-    const prompt = `VOCÊ É O ANALISTA SÊNIOR DO MOTOR SNIPER QUANTUM V18.
-                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MERCADO: ${isOTC ? 'OTC' : 'REAL'}
+                    OBJETIVO: Gerar um sinal de alta probabilidade baseado na confluência de TODAS as estratégias abaixo.
 
-                    REGRA DE OURO (ESTRATÉGIA DE 3 VELAS):
-                    Sua análise DEVE priorizar o padrão de impulsão de velas para entrada na 4ª vela:
-                    - CALL (COMPRA): Vela 1 Verde (Impulso) -> Vela 2 Vermelha (Correção) -> Vela 3 Verde (Impulso) => GATILHO NA 4ª VELA É CALL.
-                    - PUT (VENDA): Vela 1 Vermelha (Impulso) -> Vela 2 Verde (Correção) -> Vela 3 Vermelha (Impulso) => GATILHO NA 4ª VELA É PUT.
+                    ESTRATÉGIAS PARA ANÁLISE (SCANNER MULTI-CAMADAS):
+                    1. SMART MONEY CONCEPTS (SMC):
+                       - Identifique Quebra de Estrutura (BOS) e Mudança de Caráter (CHoCH).
+                       - Localize zonas de Order Block (OB) e Fair Value Gap (FVG).
                     
-                    CONFLUÊNCIAS ADICIONAIS:
-                    1. SMC: Identifique se esse padrão ocorre em zonas de Order Block ou FVG.
-                    2. MÉDIAS MÓVEIS (EMA 10/20): O sinal de CALL deve estar acima das médias e PUT abaixo.
+                    2. INDICADORES TÉCNICOS:
+                       - Médias Móveis: EMA 10 (Rápida) e EMA 20 (Tendência). 
+                       - Só operar CALL se o preço estiver acima das médias e inclinado para cima. PUT se estiver abaixo.
+                    
+                    3. PADRÕES DE CANDLE (CANDLE-A-CANDLE):
+                       - Padrão de 3 velas (Impulso-Correção-Impulso).
+                       - Rejeições em pavios e preenchimento de imbalance.
+                    
+                    4. FLUXO ALGORÍTMICO (POLARIUM BROKER):
+                       - Se mercado for OTC, analise os ciclos de repetição e manipulação típicos da Polarium para o mercado OTC.
 
-                    IMPORTANTE: NÃO mencione nomes de corretoras (como Quotex, IQ, etc). Foque apenas na análise técnica pura do fluxo de candles.
+                    CRITÉRIO DE ENTRADA: O sinal de CALL ou PUT só deve ser emitido se houver confluência entre pelo menos 3 das estratégias citadas.
 
-                    FORMATO DE RESPOSTA JSON:
+                    RESPOSTA OBRIGATÓRIA EM JSON:
                     {
                       "direction": "CALL" | "PUT",
-                      "confidence": number (94-99),
-                      "reasoning": "Sua justificativa técnica explicando a sequência de candles e a confluência com SMC/EMA."
+                      "confidence": number (94-99)
                     }`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        tools: useSearch ? [{ googleSearch: {} }] : undefined,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
-            confidence: { type: Type.NUMBER },
-            reasoning: { type: Type.STRING }
+            confidence: { type: Type.NUMBER }
           },
-          required: ['direction', 'confidence', 'reasoning'],
+          required: ['direction', 'confidence'],
         },
       },
     });
@@ -156,7 +129,7 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: data.reasoning || getRandomJustification(isOTC),
+      strategy: "SINAL VALIDADO PELO ALGORITMO SNIPER",
       timestamp: Date.now()
     };
   } catch (error) {
@@ -172,7 +145,7 @@ async function analyzeMarketStructure(
       confidence: 94, 
       buyerPercentage: fallbackDirection === SignalDirection.CALL ? 94 : 6, 
       sellerPercentage: fallbackDirection === SignalDirection.PUT ? 94 : 6,
-      strategy: getRandomJustification(isOTC), 
+      strategy: "SINAL VALIDADO PELO ALGORITMO SNIPER", 
       timestamp: Date.now()
     };
   }

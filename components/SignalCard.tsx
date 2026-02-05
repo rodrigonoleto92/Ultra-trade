@@ -12,7 +12,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isOTC = signal.pair.toUpperCase().includes('OTC');
 
   const techTags = useMemo(() => {
-    return ["BOS", "CHoCH", "ORDER BLOCK", "FVG"];
+    return ["BOS", "CHoCH", "ORDER BLOCK", "FVG", "EMA 10/20"];
   }, []);
 
   return (
@@ -27,7 +27,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
               {isOTC ? (
                 <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
                   <div className="h-1 w-1 bg-amber-500 rounded-full animate-pulse"></div>
-                  FONTE: VIP DATA FEED
+                  FONTE: MERCADO OTC
                 </span>
               ) : (
                 <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
@@ -111,16 +111,15 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
         </div>
 
-        <div className={`p-4 md:p-5 rounded-2xl border backdrop-blur-sm ${isCall ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className={`h-2 w-2 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Análise Estratégica VIP</span>
-          </div>
-          <div className="text-[11px] md:text-[13px] text-white/90 leading-relaxed font-medium italic">
-            <p className="inline">"{signal.strategy}"</p>
+        <div className={`p-4 md:p-5 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center ${isCall ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`h-2.5 w-2.5 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+            <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">
+              SINAL VALIDADO PELO ALGORITMO SNIPER
+            </span>
           </div>
           
-          <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
+          <div className="w-full mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center">
               <span className="text-[7px] text-slate-600 font-black uppercase">Volatilidade</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">

@@ -37,31 +37,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   
   const autoTriggeredRef = useRef<number | null>(null);
 
-  // Lógica de Horário de Mercado (04:00 às 16:00)
   const marketStatus = useMemo(() => {
     const now = new Date();
     const day = now.getDay(); 
     const hour = now.getHours();
     
-    // Fim de semana (Sábado = 6, Domingo = 0)
     const isWeekend = (day === 6) || (day === 0);
-    // Horário bancário brasileiro (04h às 16h)
     const isWithinRealMarketHours = hour >= 4 && hour < 16;
     const isRealMarketOpen = !isWeekend && isWithinRealMarketHours;
 
-    // Criptomoedas nunca fecham
     if (assetCategory === 'CRYPTO') return { isOpen: true, label: 'REAL (CRIPTO) - 24/7 ABERTO', isOTC: false };
     
-    // Forex segue o horário real
     if (signalType === SignalType.FOREX) {
       return isRealMarketOpen 
         ? { isOpen: true, label: 'REAL (FOREX) - ABERTO', isOTC: false } 
         : { isOpen: false, label: 'FECHADO (FOREX REAL)', isOTC: false };
     }
 
-    // Binárias (OB)
     if (marketPreference === 'OTC') {
-      return { isOpen: true, isOTC: true, label: 'MERCADO OTC (VIP) - ABERTO' };
+      return { isOpen: true, isOTC: true, label: 'MERCADO OTC - ABERTO' };
     } else {
       return { 
         isOpen: isRealMarketOpen, 
@@ -74,7 +68,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const triggerSignalGeneration = async () => {
     if (isScanning) return;
 
-    // Se o mercado estiver fechado, exibe a mensagem e gera o feedback visual
     if (!marketStatus.isOpen) {
       setMarketAlert("MERCADO REAL FECHADO. O PREGÃO OCORRE DE SEG A SEX DAS 04:00 ÀS 16:00. MUDE PARA 'OTC' OU 'CRYPTO' PARA CONTINUAR.");
       setShake(true);
@@ -162,7 +155,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     <div className="flex-1 flex flex-col text-white relative">
       <NewsModal isOpen={showNews} onClose={() => setShowNews(false)} />
       
-      {/* Mercado Fechado Toast com Z-Index Máximo */}
       {marketAlert && (
         <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-md animate-in slide-in-from-top-10 duration-500">
           <div className="glass bg-rose-950/60 border border-rose-500/50 p-5 rounded-3xl shadow-[0_0_50px_rgba(244,63,94,0.4)] flex items-center gap-4">
@@ -340,7 +332,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h4 className="text-sm font-black uppercase tracking-widest">{scanningText}</h4>
-                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest italic">Analisando Quebra de Estrutura e CHoCH</p>
+                <p className="text-[9px] text-slate-600 font-bold mt-2 uppercase tracking-widest italic">Analisando Fluxo Institucional</p>
               </div>
             ) : activeSignal ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -355,11 +347,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                   <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px]">
                     {!marketStatus.isOpen ? 'MERCADO REAL ATUALMENTE FECHADO' : 'Aguardando Quebra de Movimento'}
                   </p>
-                  {!marketStatus.isOpen && (
-                    <p className="text-rose-500/60 font-black uppercase tracking-widest text-[7px] animate-pulse">
-                      Pregão Real: 04:00 às 16:00
-                    </p>
-                  )}
                 </div>
               </div>
             )}
