@@ -8,12 +8,13 @@ interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({ className = '', size = 'md', hideText = false }) => {
-  const iconSize = size === 'sm' ? 'h-8' : size === 'lg' ? 'h-24' : 'h-16';
-  const textSize = size === 'sm' ? 'text-xl' : size === 'lg' ? 'text-5xl' : 'text-3xl';
+  // Aumentando as escalas de tamanho para garantir visibilidade Premium
+  const iconSize = size === 'sm' ? 'h-12' : size === 'lg' ? 'h-32' : 'h-20';
+  const textSize = size === 'sm' ? 'text-2xl' : size === 'lg' ? 'text-6xl' : 'text-4xl';
 
   return (
     <div className={`flex items-center gap-4 ${className}`}>
-      <svg className={`${iconSize} w-auto`} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className={`${iconSize} w-auto drop-shadow-[0_0_15px_rgba(74,222,128,0.3)]`} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#4ade80" />
@@ -30,8 +31,8 @@ const Logo: React.FC<LogoProps> = ({ className = '', size = 'md', hideText = fal
       </svg>
       {!hideText && (
         <div className="flex flex-col leading-none">
-          <span className={`font-bold text-white ${textSize}`}>Ultra</span>
-          <span className={`font-light text-slate-300 ${textSize}`}>trade</span>
+          <span className={`font-black text-white ${textSize} tracking-tighter`}>Ultra</span>
+          <span className={`font-light text-slate-300 ${textSize} tracking-tighter -mt-1`}>trade</span>
         </div>
       )}
     </div>

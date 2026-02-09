@@ -186,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         </div>
       )}
       
-      <header className="h-20 md:h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/80 backdrop-blur-2xl sticky top-0 z-50 shadow-2xl">
+      <header className="h-20 md:h-28 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/80 backdrop-blur-2xl sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -203,7 +203,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         </div>
 
         <div className="flex justify-center flex-1">
-          <Logo size="sm" hideText className="scale-75 md:scale-100" />
+          <Logo size="sm" hideText />
         </div>
 
         <div className="flex items-center gap-2 md:gap-6">
