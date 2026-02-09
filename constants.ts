@@ -35,7 +35,6 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'XAU/USD (OTC)', type: MarketType.OTC },
   { symbol: 'Gás Natural (OTC)', type: MarketType.OTC },
   { symbol: 'Boeing Company (OTC)', type: MarketType.OTC },
-  { symbol: 'FACEBOOK INC (OTC)', type: MarketType.OTC },
   { symbol: 'Johnson & Johnson (OTC)', type: MarketType.OTC },
   { symbol: 'Pfizer Inc (OTC)', type: MarketType.OTC },
   { symbol: 'American Express (OTC)', type: MarketType.OTC },
