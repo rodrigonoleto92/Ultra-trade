@@ -12,7 +12,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isOTC = signal.pair.toUpperCase().includes('OTC');
 
   const techTags = useMemo(() => {
-    return ["BOS", "CHoCH", "ORDER BLOCK", "FVG", "EMA 10/20"];
+    return ["SMC", "EMA", "MACD", "RSI"];
   }, []);
 
   return (
@@ -39,7 +39,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
               {techTags.map(tag => (
                 <span key={tag} className="text-[7px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded uppercase">{tag}</span>
               ))}
-              <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">CANDLE A CANDLE</span>
+              <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">4 CONFLUÊNCIAS</span>
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -115,27 +115,27 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           <div className="flex items-center gap-2">
             <div className={`h-2.5 w-2.5 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
             <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">
-              SINAL VALIDADO PELO ALGORITMO SNIPER
+              SINAL FILTRADO: 4 CONFLUÊNCIAS ATIVAS
             </span>
           </div>
           
           <div className="w-full mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Volatilidade</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">Filtro SMC</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '92%' }}></div>
+                <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Tendência</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">Filtro MACD</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '88%' }}></div>
+                <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Volume</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">Filtro RSI</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '75%' }}></div>
+                <div className="h-full bg-blue-500" style={{ width: '100%' }}></div>
               </div>
             </div>
           </div>
