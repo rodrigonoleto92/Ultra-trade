@@ -5,7 +5,8 @@ import { Signal, Timeframe, SignalType } from '../types';
 import { generateSignal, scanForBestSignal } from '../services/geminiService';
 import SignalCard from './SignalCard';
 import Logo from './Logo';
-import NewsModal from './NewsModal';
+import Sidebar from './Sidebar';
+import WidgetOverlay from './WidgetOverlay';
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -31,7 +32,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [isScanning, setIsScanning] = useState(false);
   const [scanningText, setScanningText] = useState('ANALISANDO FLUXO...');
   const [secondsToNextCandle, setSecondsToNextCandle] = useState(60);
-  const [showNews, setShowNews] = useState(false);
+  const [activeWidget, setActiveWidget] = useState<'CALENDAR' | 'HEATMAP' | 'CHART' | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [marketAlert, setMarketAlert] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
   
@@ -153,7 +155,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
 
   return (
     <div className="flex-1 flex flex-col text-white relative">
-      <NewsModal isOpen={showNews} onClose={() => setShowNews(false)} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+        onSelectOption={(opt) => setActiveWidget(opt)}
+      />
+      
+      <WidgetOverlay 
+        type={activeWidget} 
+        onClose={() => setActiveWidget(null)} 
+      />
       
       {marketAlert && (
         <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-md animate-in slide-in-from-top-10 duration-500">
@@ -177,11 +188,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
       
       <header className="h-20 md:h-24 flex items-center justify-between px-4 md:px-10 border-b border-white/5 bg-black/80 backdrop-blur-2xl sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center gap-3">
-          <Logo size="sm" hideText />
-          <div className="flex flex-col">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all active:scale-95 group"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-400 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="flex flex-col ml-1 hidden md:flex">
             <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Terminal,</span>
             <span className="text-[10px] md:text-xs font-bold logo-gradient-text leading-tight uppercase">{userName}</span>
           </div>
+        </div>
+
+        <div className="flex justify-center flex-1">
+          <Logo size="sm" hideText className="scale-75 md:scale-100" />
         </div>
 
         <div className="flex items-center gap-2 md:gap-6">
@@ -300,25 +322,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                   {!marketStatus.isOpen && !isScanning && <div className="absolute inset-0 bg-rose-500/5 animate-pulse"></div>}
                 </button>
               ) : (
-                <div className="space-y-3">
-                  <div 
-                    onClick={triggerSignalGeneration}
-                    className={`text-center py-5 rounded-2xl border cursor-pointer transition-all active:scale-95 ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}
-                  >
-                    <p className={`text-[8px] font-black uppercase tracking-widest ${!marketStatus.isOpen ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`}>
-                      {!marketStatus.isOpen ? 'MERCADO FECHADO (CLIQUE P/ INFO)' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
-                    </p>
-                  </div>
-                  
-                  <button 
-                    onClick={() => setShowNews(true)}
-                    className="w-full py-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-white/10 group"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002-2z" />
-                    </svg>
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white">Calendário Econômico</span>
-                  </button>
+                <div 
+                  onClick={triggerSignalGeneration}
+                  className={`text-center py-5 rounded-2xl border cursor-pointer transition-all active:scale-95 ${!marketStatus.isOpen ? 'bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}
+                >
+                  <p className={`text-[8px] font-black uppercase tracking-widest ${!marketStatus.isOpen ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`}>
+                    {!marketStatus.isOpen ? 'MERCADO FECHADO (CLIQUE P/ INFO)' : (isScanning ? scanningText : `SMC SCANNER ATIVO: ${formatTime(secondsToNextCandle)}`)}
+                  </p>
                 </div>
               )}
             </div>
