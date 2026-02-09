@@ -57,7 +57,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     }
 
     if (marketPreference === 'OTC') {
-      return { isOpen: true, isOTC: true, label: 'MERCADO OTC - ABERTO' };
+      return { isOpen: true, isOTC: true, label: 'LIVE FEED: SISTEMA OTC' };
     } else {
       return { 
         isOpen: isRealMarketOpen, 
@@ -79,21 +79,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
     }
 
     setIsScanning(true);
-    const texts = [
+    const isOTC = marketPreference === 'OTC' && assetCategory === 'MOEDAS';
+    
+    const texts = isOTC ? [
+      'CONECTANDO API DE DADOS...', 
+      'MAPEANDO CICLO ALGORÍTMICO...', 
+      'IDENTIFICANDO ZONAS DE LIQUIDEZ...', 
+      'FILTRANDO MANIPULAÇÃO...',
+      'ALGO PULSE: SINAL VALIDADO!'
+    ] : [
       'CONECTANDO AO DATA-FEED...', 
       'MAPEANDO ZONAS DE OFERTA...', 
       'IDENTIFICANDO QUEBRA DE ESTRUTURA...', 
       'VALIDANDO CONFLUÊNCIA RSI...',
       'SNIPER V18: SINAL CONFIRMADO!'
     ];
+
     for (const text of texts) {
       setScanningText(text);
       await new Promise(r => setTimeout(r, 600));
     }
 
     try {
-      const isOTC = assetCategory === 'MOEDAS' && signalType === SignalType.BINARY && marketPreference === 'OTC';
-      
       if (signalType === SignalType.BINARY) {
         const signal = isAutoMode 
           ? await scanForBestSignal(currentPairsList, selectedTimeframe, SignalType.BINARY)

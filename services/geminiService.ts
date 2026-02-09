@@ -68,25 +68,37 @@ async function analyzeMarketStructure(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // Prompt especializado para vencer o algoritmo de corretora
+    const otcSpecificInstruction = `
+      ATENÇÃO: VOCÊ ESTÁ ANALISANDO O ALGORITMO OTC DO SISTEMA VIP.
+      NÃO use apenas análise técnica clássica. O OTC é um algoritmo de repetição.
+      1. ANALISE O CICLO: Identifique se o algoritmo está em ciclo de tendência infinita ou reversão em zonas de suporte falso.
+      2. BUSCA DE LIQUIDEZ: Onde o varejo está entrando? Opere na direção que o algoritmo buscaria para 'limpar' as ordens.
+      3. PADRÃO ALGORÍTMICO: Verifique padrões de 3 velas de mesma cor seguidas de exaustão ou continuidade por preenchimento de pavio.
+      4. CONFLUÊNCIA DE ALGORITMO: O sinal deve bater com (RSI Exaustão + MACD Polaridade + FVG de Algoritmo + Volume Fake).
+    `;
+
     const prompt = `VOCÊ É O ANALISTA MESTRE DO ALGORITMO SNIPER V18.
-                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MERCADO: ${isOTC ? 'MERCADO OTC (POLARIUM DATA)' : 'REAL MARKET'}
+                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MERCADO: ${isOTC ? 'SISTEMA OTC PULSE FEED' : 'REAL MARKET'}
+
+                    ${isOTC ? otcSpecificInstruction : ''}
 
                     OBJETIVO: Gerar um sinal de ultra probabilidade baseado na confluência RIGOROSA de 4 estratégias.
 
                     ESTRATÉGIAS PARA ANÁLISE:
-                    1. SMC: Identifique CHoCH/BOS e Order Blocks.
-                    2. MÉDIAS (EMA 10/20): O preço deve estar a favor da tendência.
-                    3. MACD: A polaridade (cruzamento/histograma) deve confirmar a direção.
-                    4. RSI: O gráfico deve mostrar força mas NÃO pode estar em exaustão (Sobrecompra/venda).
-                    5. PRICE ACTION: Padrão de 3 velas e preenchimento de pavios.
+                    1. SMC/ICT: CHoCH/BOS e Order Blocks (Reais no Mercado Real, Algorítmicos no OTC).
+                    2. TENDÊNCIA DINÂMICA: EMA 10/20 como trilho de preço.
+                    3. OSCILADORES DE PULSO: MACD e RSI para detectar o exato ponto de reversão/continuação.
+                    4. PRICE ACTION DE FLUXO: Rejeição de pavio e velas de força (Marubozu).
 
                     CRITÉRIO DE ENTRADA (REGRA DE OURO): 
-                    O sinal só deve ser validado se houver confluência entre PELO MENOS 4 das 5 estratégias citadas acima simultaneamente.
+                    O sinal só deve ser validado se houver confluência entre PELO MENOS 4 estratégias simultaneamente.
 
                     RESPOSTA OBRIGATÓRIA EM JSON:
                     {
                       "direction": "CALL" | "PUT",
-                      "confidence": number (95-99)
+                      "confidence": number (95-99),
+                      "reasoning": "Breve explicação técnica da confluência"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -98,9 +110,10 @@ async function analyzeMarketStructure(
           type: Type.OBJECT,
           properties: {
             direction: { type: Type.STRING, enum: ['CALL', 'PUT'] },
-            confidence: { type: Type.NUMBER }
+            confidence: { type: Type.NUMBER },
+            reasoning: { type: Type.STRING }
           },
-          required: ['direction', 'confidence'],
+          required: ['direction', 'confidence', 'reasoning'],
         },
       },
     });
@@ -121,7 +134,7 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: "CONFLUÊNCIA QUÁDRUPLA VALIDADA",
+      strategy: isOTC ? "ALGORITMO VIP VALIDADO" : "CONFLUÊNCIA QUÁDRUPLA VALIDADA",
       timestamp: Date.now()
     };
   } catch (error) {
@@ -137,7 +150,7 @@ async function analyzeMarketStructure(
       confidence: 95, 
       buyerPercentage: fallbackDirection === SignalDirection.CALL ? 95 : 5, 
       sellerPercentage: fallbackDirection === SignalDirection.PUT ? 95 : 5,
-      strategy: "CONFLUÊNCIA QUÁDRUPLA VALIDADA", 
+      strategy: isOTC ? "ALGORITMO VIP (FALLBACK)" : "CONFLUÊNCIA QUÁDRUPLA VALIDADA", 
       timestamp: Date.now()
     };
   }

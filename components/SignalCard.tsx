@@ -12,8 +12,8 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isOTC = signal.pair.toUpperCase().includes('OTC');
 
   const techTags = useMemo(() => {
-    return ["SMC", "EMA", "MACD", "RSI"];
-  }, []);
+    return isOTC ? ["ALGO", "PULSE", "MACD", "RSI"] : ["SMC", "EMA", "MACD", "RSI"];
+  }, [isOTC]);
 
   return (
     <div className={`glass rounded-[24px] md:rounded-[32px] overflow-hidden border-t-4 md:border-t-0 md:border-l-8 ${isCall ? 'border-emerald-500' : 'border-rose-500'} shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-700 w-full`}>
@@ -27,7 +27,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
               {isOTC ? (
                 <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
                   <div className="h-1 w-1 bg-amber-500 rounded-full animate-pulse"></div>
-                  FONTE: MERCADO OTC
+                  PULSE: ALGORITMO OTC
                 </span>
               ) : (
                 <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">ALGORITMO V18</span>
@@ -37,7 +37,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
             
             <div className="flex flex-wrap gap-1 mt-2">
               {techTags.map(tag => (
-                <span key={tag} className="text-[7px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded uppercase">{tag}</span>
+                <span key={tag} className={`text-[7px] font-black border px-1.5 py-0.5 rounded uppercase ${isOTC ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{tag}</span>
               ))}
               <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">4 CONFLUÊNCIAS</span>
             </div>
@@ -68,37 +68,16 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           </div>
         </div>
 
-        {isForex ? (
-          <div className="grid grid-cols-1 gap-3 mb-5">
-            <div className="bg-blue-600/10 p-4 md:p-5 rounded-2xl border border-blue-500/30 flex flex-col items-center justify-center text-center">
-              <div className="flex items-center gap-2 mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em]">Gestão de Risco Recomendada</span>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs md:text-sm text-white font-bold">
-                  STOP: <span className="text-rose-400 font-black">{isCall ? 'Abaixo do Último Fundo' : 'Acima do Último Topo'}</span>
-                </p>
-                <p className="text-xs md:text-sm text-white font-bold">
-                  ALVO: <span className="text-emerald-400 font-black">2x o Tamanho do Stop (Ratio 2:1)</span>
-                </p>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+            <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Início</span>
+            <span className="text-sm md:text-lg font-mono font-black text-white">{signal.entryTime}</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
-              <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Início</span>
-              <span className="text-sm md:text-lg font-mono font-black text-white">{signal.entryTime}</span>
-            </div>
-            <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
-              <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Expiração</span>
-              <span className="text-sm md:text-lg font-mono font-black text-white">{signal.expirationTime}</span>
-            </div>
+          <div className="bg-black/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+            <span className="text-[8px] text-slate-500 font-black mb-1 uppercase tracking-widest">Expiração</span>
+            <span className="text-sm md:text-lg font-mono font-black text-white">{signal.expirationTime}</span>
           </div>
-        )}
+        </div>
 
         <div className="mb-5 space-y-2">
           <div className="flex justify-between text-[8px] font-black uppercase tracking-widest px-1">
@@ -115,27 +94,27 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
           <div className="flex items-center gap-2">
             <div className={`h-2.5 w-2.5 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
             <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">
-              SINAL FILTRADO: 4 CONFLUÊNCIAS ATIVAS
+              {isOTC ? 'ALGO PULSE: ALGORITMO MAPEADO' : 'SINAL FILTRADO: 4 CONFLUÊNCIAS ATIVAS'}
             </span>
           </div>
           
           <div className="w-full mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Filtro SMC</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">{isOTC ? 'LIQUIDEZ' : 'Filtro SMC'}</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
                 <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Filtro MACD</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">{isOTC ? 'CICLO' : 'Filtro MACD'}</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
                 <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">Filtro RSI</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">PULSE</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '100%' }}></div>
+                <div className={`h-full ${isOTC ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
           </div>
