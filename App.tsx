@@ -5,20 +5,20 @@ import Dashboard from './components/Dashboard';
 import Register from './components/Register';
 import Success from './components/Success';
 import TickerTape from './components/TickerTape';
-import { APP_USERS, REMOTE_PASSWORDS_URL, SECURITY_VERSION, SESSION_VERSION } from './constants';
+import { APP_USERS, REMOTE_PASSWORDS_URL, SESSION_VERSION } from './constants';
 
 type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
 
-const SECURITY_CHECK_INTERVAL = 30000; // 30 segundos
+// Intervalo de verificação agressivo para garantir logout em tempo real
+const SECURITY_CHECK_INTERVAL = 2000; 
 
 const App: React.FC = () => {
-  // Inicialização validando a versão da sessão salva
   const [view, setView] = useState<AppView>(() => {
     const savedSession = localStorage.getItem('ultra_trade_session');
     const savedVersion = localStorage.getItem('ultra_session_version');
 
-    // Se a versão do código for diferente da versão salva, limpa tudo e pede login
-    if (savedVersion !== SESSION_VERSION) {
+    // Kill-switch imediato se a versão salva for diferente da constante atual
+    if (savedSession && savedVersion !== SESSION_VERSION) {
       localStorage.removeItem('ultra_trade_session');
       localStorage.removeItem('ultra_trade_user');
       localStorage.removeItem('ultra_session_version');
@@ -37,19 +37,29 @@ const App: React.FC = () => {
   });
 
   const handleLogout = useCallback(() => {
-    setAuthPassword(null);
     localStorage.removeItem('ultra_trade_session');
     localStorage.removeItem('ultra_trade_user');
     localStorage.removeItem('ultra_session_version');
+    setAuthPassword(null);
     setView('LOGIN');
-    // Força o recarregamento para limpar estados residuais
+    // Forçar recarregamento garante que qualquer estado de memória seja limpo
     window.location.reload();
   }, []);
 
   const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
+    // 1. Verificação Mestra em APP_USERS (constants.ts)
     const user = APP_USERS.find(u => u.key === pass);
     if (user) return { isValid: true, name: user.name };
 
+    // 2. Verificação de usuários registrados localmente (se permitido)
+    const localUsersRaw = localStorage.getItem('registered_users_data');
+    if (localUsersRaw) {
+      const localUsers = JSON.parse(localUsersRaw);
+      const localUser = localUsers.find((u: any) => u.password === pass);
+      if (localUser) return { isValid: true, name: localUser.name };
+    }
+
+    // 3. Verificação Remota (Fallback)
     try {
       const response = await fetch(`${REMOTE_PASSWORDS_URL}?t=${Date.now()}`);
       if (response.ok) {
@@ -58,74 +68,68 @@ const App: React.FC = () => {
         if (remoteList.includes(pass)) return { isValid: true, name: 'Acesso VIP' };
       }
     } catch (e) {
-      console.error("Erro na validação remota");
-    }
-
-    const localUsersRaw = localStorage.getItem('registered_users_data');
-    if (localUsersRaw) {
-      const localUsers = JSON.parse(localUsersRaw);
-      const localUser = localUsers.find((u: any) => u.password === pass);
-      if (localUser) return { isValid: true, name: localUser.name };
+      // Falha silenciosa na remota
     }
 
     return { isValid: false };
   }, []);
 
-  // Monitoramento contínuo de segurança e versão
+  // Monitoramento contínuo de segurança
   useEffect(() => {
     if (view !== 'DASHBOARD') return;
 
-    const checkSessionIntegrity = async () => {
+    const checkSecurity = async () => {
+      const currentToken = localStorage.getItem('ultra_trade_session');
       const savedVersion = localStorage.getItem('ultra_session_version');
-      
-      // Verificação 1: Se a versão mudou no código (Atualização do admin)
+
+      // 1. Verifica versão (Master Logout)
       if (savedVersion !== SESSION_VERSION) {
+        console.log("Sessão expirada por atualização de versão.");
         handleLogout();
         return;
       }
 
-      // Verificação 2: Se a senha ainda é válida (Revogação de acesso)
-      if (authPassword) {
-        const { isValid } = await validateUser(authPassword);
+      // 2. Verifica se a senha atual ainda consta na lista permitida
+      if (currentToken) {
+        const { isValid } = await validateUser(currentToken);
         if (!isValid) {
+          console.log("Credenciais revogadas pelo administrador.");
           handleLogout();
         }
+      } else {
+        handleLogout();
       }
     };
 
-    const timer = setInterval(checkSessionIntegrity, SECURITY_CHECK_INTERVAL);
+    // Verificação inicial
+    checkSecurity();
 
-    // Verifica também ao voltar para a aba
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkSessionIntegrity();
-      }
-    };
+    // Loop de verificação frequente
+    const interval = setInterval(checkSecurity, SECURITY_CHECK_INTERVAL);
 
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', checkSessionIntegrity);
+    // Verificação extra ao voltar para a janela (evita bypass com aba inativa)
+    const onFocus = () => checkSecurity();
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('visibilitychange', onFocus);
 
     return () => {
-      clearInterval(timer);
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', checkSessionIntegrity);
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('visibilitychange', onFocus);
     };
-  }, [view, authPassword, validateUser, handleLogout]);
+  }, [view, handleLogout, validateUser]);
 
   const handleLogin = async (pass: string) => {
     const { isValid, name } = await validateUser(pass);
     if (isValid) {
       const finalName = name || 'Trader';
-      
-      // Salva no estado
-      setAuthPassword(pass);
-      setUserName(finalName);
-      setView('DASHBOARD');
-
-      // Salva no localStorage com a versão atual
       localStorage.setItem('ultra_trade_session', pass);
       localStorage.setItem('ultra_trade_user', finalName);
       localStorage.setItem('ultra_session_version', SESSION_VERSION);
+      
+      setAuthPassword(pass);
+      setUserName(finalName);
+      setView('DASHBOARD');
     } else {
       throw new Error("Credenciais inválidas.");
     }
