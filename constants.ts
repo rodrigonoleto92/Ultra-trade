@@ -34,10 +34,6 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'USD/COP (OTC)', type: MarketType.OTC },
   { symbol: 'XAU/USD (OTC)', type: MarketType.OTC },
   { symbol: 'Gás Natural (OTC)', type: MarketType.OTC },
-  { symbol: 'Boeing Company (OTC)', type: MarketType.OTC },
-  { symbol: 'Johnson & Johnson (OTC)', type: MarketType.OTC },
-  { symbol: 'Pfizer Inc (OTC)', type: MarketType.OTC },
-  { symbol: 'American Express (OTC)', type: MarketType.OTC },
   { symbol: 'Coca Cola (OTC)', type: MarketType.OTC },
   { symbol: 'AUS 200 (OTC)', type: MarketType.OTC },
   { symbol: 'GER 30 (OTC)', type: MarketType.OTC },
@@ -55,8 +51,9 @@ export const OTC_PAIRS: CurrencyPair[] = [
   { symbol: 'JP Morgan (OTC)', type: MarketType.OTC },
   { symbol: 'Nike (OTC)', type: MarketType.OTC },
   { symbol: 'Google (OTC)', type: MarketType.OTC },
-  { symbol: 'Visa (OTC)', type: MarketType.OTC },
-  { symbol: 'Walmart (OTC)', type: MarketType.OTC },
+  { symbol: 'Jp 225 (OTC)', type: MarketType.OTC },
+  { symbol: 'Sandbox (OTC)', type: MarketType.OTC },
+  { symbol: 'Bonk (OTC)', type: MarketType.OTC },
 ];
 
 export const CRYPTO_PAIRS: CurrencyPair[] = [
