@@ -88,7 +88,7 @@ export const FOREX_TIMEFRAMES = [
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
 export const APP_USERS = [
-  { key: 'admin_92', name: 'Rodrigo' },
+  { key: 'admin_90', name: 'Rodrigo' },
   { key: 'ruan_vitalicio', name: 'Ruan' },
   { key: 'duda2102', name: 'WALLACE' },
   { key: '03silva#', name: 'Eduardo' },
