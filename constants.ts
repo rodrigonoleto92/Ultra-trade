@@ -92,7 +92,7 @@ export const APP_USERS = [
   { key: 'ruan_vitalicio', name: 'Ruan' },
   { key: 'duda2102', name: 'WALLACE' },
   { key: '03silva#', name: 'Eduardo' },
-  { key: 'teste_153', name: 'teste' },
+  { key: 'teste_150', name: 'teste' },
   { key: '92230241', name: 'Tobias' },
 ];
 
