@@ -9,15 +9,13 @@ import { APP_USERS, REMOTE_PASSWORDS_URL, SESSION_VERSION } from './constants';
 
 type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
 
-// Intervalo de verificação agressivo para garantir logout em tempo real
-const SECURITY_CHECK_INTERVAL = 2000; 
+const SECURITY_CHECK_INTERVAL = 1000; // Reduzido para 1 segundo para precisão máxima
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(() => {
     const savedSession = localStorage.getItem('ultra_trade_session');
     const savedVersion = localStorage.getItem('ultra_session_version');
 
-    // Kill-switch imediato se a versão salva for diferente da constante atual
     if (savedSession && savedVersion !== SESSION_VERSION) {
       localStorage.removeItem('ultra_trade_session');
       localStorage.removeItem('ultra_trade_user');
@@ -42,16 +40,15 @@ const App: React.FC = () => {
     localStorage.removeItem('ultra_session_version');
     setAuthPassword(null);
     setView('LOGIN');
-    // Forçar recarregamento garante que qualquer estado de memória seja limpo
     window.location.reload();
   }, []);
 
+  // Função de validação agora é sensível a mudanças nas constantes globais
   const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
-    // 1. Verificação Mestra em APP_USERS (constants.ts)
+    // Verifica contra a lista ATUAL em constants.ts
     const user = APP_USERS.find(u => u.key === pass);
     if (user) return { isValid: true, name: user.name };
 
-    // 2. Verificação de usuários registrados localmente (se permitido)
     const localUsersRaw = localStorage.getItem('registered_users_data');
     if (localUsersRaw) {
       const localUsers = JSON.parse(localUsersRaw);
@@ -59,7 +56,6 @@ const App: React.FC = () => {
       if (localUser) return { isValid: true, name: localUser.name };
     }
 
-    // 3. Verificação Remota (Fallback)
     try {
       const response = await fetch(`${REMOTE_PASSWORDS_URL}?t=${Date.now()}`);
       if (response.ok) {
@@ -67,14 +63,12 @@ const App: React.FC = () => {
         const remoteList = text.split('\n').map(p => p.trim());
         if (remoteList.includes(pass)) return { isValid: true, name: 'Acesso VIP' };
       }
-    } catch (e) {
-      // Falha silenciosa na remota
-    }
+    } catch (e) {}
 
     return { isValid: false };
-  }, []);
+  }, [APP_USERS]); // Re-calcula se APP_USERS mudar
 
-  // Monitoramento contínuo de segurança
+  // Efeito de monitoramento de segurança "Ultra Ativo"
   useEffect(() => {
     if (view !== 'DASHBOARD') return;
 
@@ -82,18 +76,16 @@ const App: React.FC = () => {
       const currentToken = localStorage.getItem('ultra_trade_session');
       const savedVersion = localStorage.getItem('ultra_session_version');
 
-      // 1. Verifica versão (Master Logout)
+      // Check 1: Versão Global
       if (savedVersion !== SESSION_VERSION) {
-        console.log("Sessão expirada por atualização de versão.");
         handleLogout();
         return;
       }
 
-      // 2. Verifica se a senha atual ainda consta na lista permitida
+      // Check 2: Validação da senha ativa
       if (currentToken) {
         const { isValid } = await validateUser(currentToken);
         if (!isValid) {
-          console.log("Credenciais revogadas pelo administrador.");
           handleLogout();
         }
       } else {
@@ -101,21 +93,28 @@ const App: React.FC = () => {
       }
     };
 
-    // Verificação inicial
+    // Check imediato ao montar
     checkSecurity();
 
-    // Loop de verificação frequente
+    // Loop de verificação em segundo plano
     const interval = setInterval(checkSecurity, SECURITY_CHECK_INTERVAL);
 
-    // Verificação extra ao voltar para a janela (evita bypass com aba inativa)
-    const onFocus = () => checkSecurity();
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('visibilitychange', onFocus);
+    // SENSORES DE MOVIMENTO: Verifica a cada interação do usuário no app
+    const onUserInteraction = () => checkSecurity();
+    
+    window.addEventListener('mousedown', onUserInteraction);
+    window.addEventListener('keydown', onUserInteraction);
+    window.addEventListener('scroll', onUserInteraction);
+    window.addEventListener('focus', onUserInteraction);
+    window.addEventListener('visibilitychange', onUserInteraction);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('mousedown', onUserInteraction);
+      window.removeEventListener('keydown', onUserInteraction);
+      window.removeEventListener('scroll', onUserInteraction);
+      window.removeEventListener('focus', onUserInteraction);
+      window.removeEventListener('visibilitychange', onUserInteraction);
     };
   }, [view, handleLogout, validateUser]);
 
