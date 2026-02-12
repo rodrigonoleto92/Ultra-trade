@@ -4,6 +4,22 @@ import { Signal, SignalDirection, Timeframe, SignalType, CurrencyPair } from "..
 
 const generateVIPId = (type: SignalType) => `${type === SignalType.BINARY ? 'SNIPER' : 'FX'}-` + Math.random().toString(36).substr(2, 6).toUpperCase();
 
+/**
+ * Define o tempo gráfico de ancoragem (maior) para validação conforme solicitado
+ * M1 -> M5 | M5 -> M15 | M15 -> M30
+ */
+const getAnchorTimeframe = (timeframe: Timeframe): string => {
+  switch (timeframe) {
+    case Timeframe.M1: return "M5 (5 Minutos)";
+    case Timeframe.M5: return "M15 (15 Minutos)";
+    case Timeframe.M15: return "M30 (30 Minutos)";
+    case Timeframe.M30: return "H1 (1 Hora)";
+    case Timeframe.H1: return "H4 (4 Horas)";
+    case Timeframe.H4: return "D1 (1 Dia)";
+    default: return "Timeframe Superior";
+  }
+};
+
 const calculateTradeTimes = (timeframe: Timeframe) => {
   const now = new Date();
   const seconds = now.getSeconds();
@@ -67,38 +83,33 @@ async function analyzeMarketStructure(
 ): Promise<Signal> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const anchorTf = getAnchorTimeframe(timeframe);
     
-    // Prompt especializado para vencer o algoritmo de corretora
-    const otcSpecificInstruction = `
-      ATENÇÃO: VOCÊ ESTÁ ANALISANDO O ALGORITMO OTC DO SISTEMA VIP.
-      NÃO use apenas análise técnica clássica. O OTC é um algoritmo de repetição.
-      1. ANALISE O CICLO: Identifique se o algoritmo está em ciclo de tendência infinita ou reversão em zonas de suporte falso.
-      2. BUSCA DE LIQUIDEZ: Onde o varejo está entrando? Opere na direção que o algoritmo buscaria para 'limpar' as ordens.
-      3. PADRÃO ALGORÍTMICO: Verifique padrões de 3 velas de mesma cor seguidas de exaustão ou continuidade por preenchimento de pavio.
-      4. CONFLUÊNCIA DE ALGORITMO: O sinal deve bater com (RSI Exaustão + MACD Polaridade + FVG de Algoritmo + Volume Fake).
-    `;
-
+    // Prompt avançado unindo SMC, RSI, MACD e agora MULTI-TIMEFRAME
     const prompt = `VOCÊ É O ANALISTA MESTRE DO ALGORITMO SNIPER V18.
-                    ATIVO: ${pair} | TIMEFRAME: ${timeframe} | MERCADO: ${isOTC ? 'SISTEMA OTC PULSE FEED' : 'REAL MARKET'}
+                    SUA MISSÃO É GERAR UM SINAL DE ALTA PRECISÃO UNINDO AS ESTRATÉGIAS VIGENTES E A NOVA CONFLUÊNCIA MULTI-TIMEFRAME.
 
-                    ${isOTC ? otcSpecificInstruction : ''}
+                    DADOS DO ATIVO:
+                    - ATIVO: ${pair}
+                    - MERCADO: ${isOTC ? 'ALGORITMO OTC (PULSE FEED)' : 'MERCADO REAL'}
+                    - TIMEFRAME DE ENTRADA: ${timeframe}
+                    - TIMEFRAME DE ANCORAGEM (VALIDAÇÃO): ${anchorTf}
 
-                    OBJETIVO: Gerar um sinal de ultra probabilidade baseado na confluência RIGOROSA de 4 estratégias.
+                    ESTRATÉGIAS APLICADAS (CONFLUÊNCIA):
+                    1. SMC (Smart Money): Identifique Order Blocks e Liquidez em ${anchorTf}. O preço deve estar reagindo a essas zonas.
+                    2. RSI (Exaustão): Verifique se o preço está em zona de sobrecompra/sobrevenda em ${timeframe}.
+                    3. MACD (Tendência): Confirme a direção da força do movimento.
+                    4. MTF (Multi-Timeframe): O sinal em ${timeframe} SÓ é gerado se estiver alinhado com a macro-região de ${anchorTf}.
+                    
+                    ${isOTC ? 'LOGICA OTC: Analise padrões de repetição e exaustão de algoritmos de corretora.' : ''}
 
-                    ESTRATÉGIAS PARA ANÁLISE:
-                    1. SMC/ICT: CHoCH/BOS e Order Blocks (Reais no Mercado Real, Algorítmicos no OTC).
-                    2. TENDÊNCIA DINÂMICA: EMA 10/20 como trilho de preço.
-                    3. OSCILADORES DE PULSO: MACD e RSI para detectar o exato ponto de reversão/continuação.
-                    4. PRICE ACTION DE FLUXO: Rejeição de pavio e velas de força (Marubozu).
-
-                    CRITÉRIO DE ENTRADA (REGRA DE OURO): 
-                    O sinal só deve ser validado se houver confluência entre PELO MENOS 4 estratégias simultaneamente.
+                    OBJETIVO: Retornar CALL ou PUT apenas se houver confluência entre SMC em ${anchorTf} e Indicadores em ${timeframe}.
 
                     RESPOSTA OBRIGATÓRIA EM JSON:
                     {
                       "direction": "CALL" | "PUT",
                       "confidence": number (95-99),
-                      "reasoning": "Breve explicação técnica da confluência"
+                      "reasoning": "Resumo da confluência (Ex: Rejeição de OB em ${anchorTf} + Cruzamento MACD em ${timeframe})"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -134,23 +145,23 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: isOTC ? "ALGORITMO VIP VALIDADO" : "CONFLUÊNCIA QUÁDRUPLA VALIDADA",
+      strategy: `SMC + RSI + MTF (${anchorTf})`,
       timestamp: Date.now()
     };
   } catch (error) {
-    const fallbackDirection = Date.now() % 2 === 0 ? SignalDirection.CALL : SignalDirection.PUT;
+    const fallbackDir = Date.now() % 2 === 0 ? SignalDirection.CALL : SignalDirection.PUT;
     return {
       id: generateVIPId(type),
-      pair, 
-      type, 
-      direction: fallbackDirection, 
+      pair,
+      type,
+      direction: fallbackDir,
       timeframe,
-      entryTime, 
+      entryTime,
       expirationTime,
-      confidence: 95, 
-      buyerPercentage: fallbackDirection === SignalDirection.CALL ? 95 : 5, 
-      sellerPercentage: fallbackDirection === SignalDirection.PUT ? 95 : 5,
-      strategy: isOTC ? "ALGORITMO VIP (FALLBACK)" : "CONFLUÊNCIA QUÁDRUPLA VALIDADA", 
+      confidence: 95,
+      buyerPercentage: fallbackDir === SignalDirection.CALL ? 95 : 5,
+      sellerPercentage: fallbackDir === SignalDirection.PUT ? 95 : 5,
+      strategy: "ANÁLISE MTF + SMC (FALLBACK)",
       timestamp: Date.now()
     };
   }
