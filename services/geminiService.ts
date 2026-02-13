@@ -68,27 +68,27 @@ async function analyzeMarketStructure(
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const prompt = `VOCÊ É O ANALISTA MESTRE DO ALGORITMO SNIPER V18 - ESPECIALISTA EM PRICE ACTION MICRO.
-                    SUA MISSÃO É ANALISAR O GRÁFICO VELA-A-VELA NO TIMEFRAME DE ${timeframe}.
+    const prompt = `VOCÊ É O ANALISTA MESTRE DO ALGORITMO SNIPER V18 - ESPECIALISTA EM SMC (SMART MONEY CONCEPTS) E PRICE ACTION AVANÇADO.
 
-                    DADOS DO ATIVO:
-                    - ATIVO: ${pair}
-                    - MERCADO: ${isOTC ? 'OTC (Padrões de Algoritmo)' : 'MERCADO REAL (Price Action)'}
+                    CONTEXTO: ${pair} no timeframe ${timeframe}.
+                    MERCADO: ${isOTC ? 'OTC (Algoritmo Corretora)' : 'MERCADO REAL'}.
 
-                    ESTRATÉGIAS INTEGRADAS (MÁXIMA CONFLUÊNCIA):
-                    1. ESTRUTURA DINÂMICA: Identifique Linhas de Tendência (LTA/LTB) e Canais. O sinal deve ser a favor do rompimento ou no toque da extremidade do canal.
-                    2. PADRÕES DE CANDLE: Analise as últimas 3 velas. Busque por Engolfo, Martelo, Pin Bar ou Doji de exaustão em zonas de preço.
-                    3. SMC (Smart Money): Localize Order Blocks e zonas de Liquidez que atraem o preço no curto prazo.
-                    4. INDICADORES (RSI/MACD): Use para confirmar se o padrão de candle ocorre em zona de exaustão.
-                    
-                    LOGICA DE ENTRADA: O sinal deve ser gerado quando um PADRÃO DE REVERSÃO ou CONTINUIDADE tocar uma zona de LTA, LTB ou SUPORTE/RESISTÊNCIA.
+                    REGRAS CRÍTICAS DE ANÁLISE (PRIORIDADE MÁXIMA):
+                    1. VELAS DE FORÇA (BODY STRENGTH): Priorize rompimentos de estrutura (BOS) feitos por velas de corpo cheio (corpo grande, quase sem pavio). O fechamento deve ser nítido além da zona rompida.
+                    2. REJEIÇÃO COM PAVIL LONGO: Identifique sinais de reversão quando o preço toca um Order Block ou Suporte/Resistência relevante e deixa um PAVIL LONGO (Shadow), indicando absorção institucional forte.
+                    3. FILTRO DE FRAQUEZA (FAKEOUTS): Se houver rompimento mas a vela deixar um PAVIL GRANDE (mais de 40% da vela), considere isso fraqueza e alta chance de ROMPIMENTO FALSO. Não dê sinal de continuidade nesses casos; priorize a reversão se houver confluência.
+                    4. SMC FLOW: Analise mitigações de zonas institucionais e capturas de liquidez.
+
+                    GATILHOS:
+                    - CALL: Rompimento de alta com vela de corpo forte OU forte rejeição inferior (pavil longo) em zona de demanda.
+                    - PUT: Rompimento de baixa com vela de corpo forte OU forte rejeição superior (pavil longo) em zona de oferta.
 
                     RESPOSTA EM JSON:
                     {
                       "direction": "CALL" | "PUT",
                       "confidence": number (95-99),
-                      "reasoning": "Descreva o padrão (Ex: Martelo em LTA + RSI Sobrevendido)",
-                      "pattern": "Nome do padrão identificado (Ex: LTA + ENGOLFO)"
+                      "reasoning": "Explique o gatilho (Ex: BOS com Vela de Força / Rejeição em OB com Pavil Longo)",
+                      "pattern": "Estratégia (Ex: CANDLE STRENGTH / REJECTION PINBAR / FAKEOUT DETECTION)"
                     }`;
 
     const response = await ai.models.generateContent({
@@ -125,7 +125,7 @@ async function analyzeMarketStructure(
       confidence: confidence,
       buyerPercentage: direction === SignalDirection.CALL ? confidence : 100 - confidence,
       sellerPercentage: direction === SignalDirection.PUT ? confidence : 100 - confidence,
-      strategy: `${data.pattern || 'ACTION'} + SMC + RSI`,
+      strategy: `${data.pattern || 'CANDLE STRENGTH'}`,
       timestamp: Date.now()
     };
   } catch (error) {
@@ -141,7 +141,7 @@ async function analyzeMarketStructure(
       confidence: 95,
       buyerPercentage: fallbackDir === SignalDirection.CALL ? 95 : 5,
       sellerPercentage: fallbackDir === SignalDirection.PUT ? 95 : 5,
-      strategy: "PRICE ACTION + STRUCTURE",
+      strategy: "SMC + CANDLE STRENGTH",
       timestamp: Date.now()
     };
   }
