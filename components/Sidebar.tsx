@@ -5,16 +5,12 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectOption: (option: 'CALENDAR' | 'HEATMAP' | 'CHART') => void;
-  isVoiceAlertEnabled: boolean;
-  onToggleVoiceAlert: (enabled: boolean) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   isOpen, 
   onClose, 
-  onSelectOption, 
-  isVoiceAlertEnabled, 
-  onToggleVoiceAlert 
+  onSelectOption
 }) => {
   const options = [
     { 
@@ -48,19 +44,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       )
     }
   ];
-
-  // Função para "destravar" o áudio no mobile quando o usuário interage
-  const handleToggle = (enabled: boolean) => {
-    onToggleVoiceAlert(enabled);
-    if (enabled && 'speechSynthesis' in window) {
-      // Pequeno priming para destravar permissão de áudio no Safari/Chrome Mobile
-      window.speechSynthesis.cancel();
-      const msg = new SpeechSynthesisUtterance('Voz ativada');
-      msg.lang = 'pt-BR';
-      msg.volume = 0.1; // Fala baixinho só para validar o contexto
-      window.speechSynthesis.speak(msg);
-    }
-  };
 
   return (
     <>
@@ -107,45 +90,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </button>
                 ))}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/5">
-              <h3 className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Configurações de Áudio</h3>
-              <div className="px-4 space-y-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`p-2 rounded-lg ${isVoiceAlertEnabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                    {isVoiceAlertEnabled ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-black text-white uppercase tracking-wider">Alerta Sonoro (IA)</h4>
-                    <p className="text-[8px] text-slate-500 font-bold uppercase">Voz Feminina Robótica</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
-                  <button 
-                    onClick={() => handleToggle(false)} 
-                    className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all border ${!isVoiceAlertEnabled ? 'bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-lg' : 'border-transparent text-slate-600'}`}
-                  >
-                    DESLIGADO
-                  </button>
-                  <button 
-                    onClick={() => handleToggle(true)} 
-                    className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all border ${isVoiceAlertEnabled ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg' : 'border-transparent text-slate-600'}`}
-                  >
-                    LIGADO
-                  </button>
-                </div>
               </div>
             </div>
           </nav>
