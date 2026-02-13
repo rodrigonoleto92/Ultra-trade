@@ -12,7 +12,9 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
   const isOTC = signal.pair.toUpperCase().includes('OTC');
 
   const techTags = useMemo(() => {
-    return isOTC ? ["ALGO", "PULSE", "MACD", "RSI"] : ["SMC", "EMA", "MACD", "RSI"];
+    // Adicionando PATTERNS e STRUC ao conjunto de tags
+    const base = isOTC ? ["ALGO", "PULSE", "MACD"] : ["SMC", "EMA", "MACD"];
+    return [...base, "PATTERNS", "STRUC"];
   }, [isOTC]);
 
   return (
@@ -39,7 +41,7 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
               {techTags.map(tag => (
                 <span key={tag} className={`text-[7px] font-black border px-1.5 py-0.5 rounded uppercase ${isOTC ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{tag}</span>
               ))}
-              <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">4 CONFLUÊNCIAS</span>
+              <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">6 CONFLUÊNCIAS</span>
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -93,26 +95,26 @@ const SignalCard: React.FC<SignalCardProps> = ({ signal }) => {
         <div className={`p-4 md:p-5 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center ${isCall ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
           <div className="flex items-center gap-2">
             <div className={`h-2.5 w-2.5 rounded-full animate-pulse ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-            <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white">
-              {isOTC ? 'ALGO PULSE: ALGORITMO MAPEADO' : 'SINAL FILTRADO: 4 CONFLUÊNCIAS ATIVAS'}
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white text-center">
+              {signal.strategy}
             </span>
           </div>
           
           <div className="w-full mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">{isOTC ? 'LIQUIDEZ' : 'Filtro SMC'}</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">PADRÕES</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
                 <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">{isOTC ? 'CICLO' : 'Filtro MACD'}</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">LTA/LTB</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
                 <div className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: '100%' }}></div>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[7px] text-slate-600 font-black uppercase">PULSE</span>
+              <span className="text-[7px] text-slate-600 font-black uppercase">CANAL</span>
               <div className="h-1 w-full bg-white/5 mt-1 rounded-full overflow-hidden">
                 <div className={`h-full ${isOTC ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: '100%' }}></div>
               </div>
