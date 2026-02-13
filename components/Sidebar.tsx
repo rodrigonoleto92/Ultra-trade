@@ -49,6 +49,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   ];
 
+  // Função para "destravar" o áudio no mobile quando o usuário interage
+  const handleToggle = (enabled: boolean) => {
+    onToggleVoiceAlert(enabled);
+    if (enabled && 'speechSynthesis' in window) {
+      // Pequeno priming para destravar permissão de áudio no Safari/Chrome Mobile
+      window.speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance('Voz ativada');
+      msg.lang = 'pt-BR';
+      msg.volume = 0.1; // Fala baixinho só para validar o contexto
+      window.speechSynthesis.speak(msg);
+    }
+  };
+
   return (
     <>
       <div 
@@ -73,7 +86,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <nav className="flex-1 p-4 space-y-6 overflow-y-auto scrollbar-hide">
-            {/* Seção de Ferramentas */}
             <div>
               <h3 className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Análise & Ferramentas</h3>
               <div className="space-y-1">
@@ -98,7 +110,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Seção de Configurações */}
             <div className="pt-4 border-t border-white/5">
               <h3 className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Configurações de Áudio</h3>
               <div className="px-4 space-y-4">
@@ -123,13 +134,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                   <button 
-                    onClick={() => onToggleVoiceAlert(false)} 
+                    onClick={() => handleToggle(false)} 
                     className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all border ${!isVoiceAlertEnabled ? 'bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-lg' : 'border-transparent text-slate-600'}`}
                   >
                     DESLIGADO
                   </button>
                   <button 
-                    onClick={() => onToggleVoiceAlert(true)} 
+                    onClick={() => handleToggle(true)} 
                     className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all border ${isVoiceAlertEnabled ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg' : 'border-transparent text-slate-600'}`}
                   >
                     LIGADO

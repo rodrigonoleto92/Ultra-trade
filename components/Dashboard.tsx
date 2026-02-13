@@ -40,45 +40,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   
   const autoTriggeredRef = useRef<number | null>(null);
 
-  // Função aprimorada para forçar voz feminina e robótica
+  // Função para alerta sonoro - Otimizada para Mobile
   const playSignalAlert = () => {
     if (!isVoiceAlertEnabled) return;
     
     if ('speechSynthesis' in window) {
+      // Cancela qualquer fala anterior para evitar fila infinita
       window.speechSynthesis.cancel();
       
       const msg = new SpeechSynthesisUtterance('Sinal gerado');
       msg.lang = 'pt-BR';
       
+      // Carrega vozes disponíveis no momento (importante para Mobile)
       const voices = window.speechSynthesis.getVoices();
       
+      // Busca exaustiva por vozes femininas em pt-BR (padrões iOS/Android/Chrome)
       const femaleVoice = voices.find(v => 
-        v.lang.includes('pt') && (
+        (v.lang.toLowerCase().includes('pt-br') || v.lang.toLowerCase().includes('pt_br')) && (
           v.name.toLowerCase().includes('female') || 
+          v.name.toLowerCase().includes('feminina') || 
           v.name.toLowerCase().includes('maria') || 
           v.name.toLowerCase().includes('luciana') || 
           v.name.toLowerCase().includes('vitória') || 
           v.name.toLowerCase().includes('victoria') ||
-          v.name.toLowerCase().includes('google português do brasil') ||
+          v.name.toLowerCase().includes('google português') ||
           v.name.toLowerCase().includes('francisca') ||
-          v.name.toLowerCase().includes('heloisa')
+          v.name.toLowerCase().includes('heloisa') ||
+          v.name.toLowerCase().includes('premium') ||
+          v.name.toLowerCase().includes('siri')
         )
-      ) || voices.find(v => v.lang.includes('pt'));
+      ) || voices.find(v => v.lang.toLowerCase().includes('pt'));
       
       if (femaleVoice) msg.voice = femaleVoice;
       
-      msg.pitch = 1.4; 
+      // Ajustes para voz "Robótica" e Inteligível
+      msg.pitch = 1.35; 
       msg.rate = 1.0;
-      msg.volume = 1;
+      msg.volume = 1.0;
       
       window.speechSynthesis.speak(msg);
     }
   };
 
+  // Garante que o sistema de vozes está pronto (Mobile requer isso)
   useEffect(() => {
-    window.speechSynthesis.getVoices();
-    if ('onvoiceschanged' in window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+
+    const loadVoices = () => {
+      synth.getVoices();
+    };
+
+    loadVoices();
+    if ('onvoiceschanged' in synth) {
+      synth.onvoiceschanged = loadVoices;
     }
   }, []);
 
