@@ -27,6 +27,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [marketPreference, setMarketPreference] = useState<'REAL' | 'OTC'>('REAL');
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
   const [isAutoMode, setIsAutoMode] = useState(true);
+  const [isVoiceAlertEnabled, setIsVoiceAlertEnabled] = useState(true);
   
   const [activeSignal, setActiveSignal] = useState<Signal | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -38,6 +39,54 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
   const [shake, setShake] = useState(false);
   
   const autoTriggeredRef = useRef<number | null>(null);
+
+  // Função aprimorada para forçar voz feminina e robótica
+  const playSignalAlert = () => {
+    if (!isVoiceAlertEnabled) return;
+    
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      
+      const msg = new SpeechSynthesisUtterance('Sinal gerado');
+      msg.lang = 'pt-BR';
+      
+      const voices = window.speechSynthesis.getVoices();
+      
+      const femaleVoice = voices.find(v => 
+        v.lang.includes('pt') && (
+          v.name.toLowerCase().includes('female') || 
+          v.name.toLowerCase().includes('maria') || 
+          v.name.toLowerCase().includes('luciana') || 
+          v.name.toLowerCase().includes('vitória') || 
+          v.name.toLowerCase().includes('victoria') ||
+          v.name.toLowerCase().includes('google português do brasil') ||
+          v.name.toLowerCase().includes('francisca') ||
+          v.name.toLowerCase().includes('heloisa')
+        )
+      ) || voices.find(v => v.lang.includes('pt'));
+      
+      if (femaleVoice) msg.voice = femaleVoice;
+      
+      msg.pitch = 1.4; 
+      msg.rate = 1.0;
+      msg.volume = 1;
+      
+      window.speechSynthesis.speak(msg);
+    }
+  };
+
+  useEffect(() => {
+    window.speechSynthesis.getVoices();
+    if ('onvoiceschanged' in window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSignal && !isScanning) {
+      playSignalAlert();
+    }
+  }, [activeSignal?.id]);
 
   const marketStatus = useMemo(() => {
     const now = new Date();
@@ -65,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         label: isRealMarketOpen ? 'MERCADO REAL - ABERTO' : 'FECHADO (MERCADO REAL)' 
       };
     }
-  }, [assetCategory, signalType, marketPreference, Math.floor(Date.now() / 60000)]);
+  }, [assetCategory, signalType, marketPreference]);
 
   const triggerSignalGeneration = async () => {
     if (isScanning) return;
@@ -166,6 +215,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
         onSelectOption={(opt) => setActiveWidget(opt)}
+        isVoiceAlertEnabled={isVoiceAlertEnabled}
+        onToggleVoiceAlert={setIsVoiceAlertEnabled}
       />
       
       <WidgetOverlay 
@@ -204,7 +255,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
             </svg>
           </button>
           <div className="flex flex-col ml-1 hidden md:flex">
-            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Terminal,</span>
+            <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">Bem vindo,</span>
             <span className="text-[10px] md:text-xs font-bold logo-gradient-text leading-tight uppercase">{userName}</span>
           </div>
         </div>

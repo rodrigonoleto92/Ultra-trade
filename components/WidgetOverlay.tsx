@@ -45,24 +45,24 @@ const WidgetOverlay: React.FC<WidgetOverlayProps> = ({ type, onClose }) => {
           "locale": "pt"
         });
       } else if (type === 'CHART') {
-        // Para o gráfico avançado, precisamos usar o objeto TV após o script carregar
         script.onload = () => {
-          new (window as any).TradingView.widget({
-            "width": "100%",
-            "height": "100%",
-            "symbol": "FX:EURUSD",
-            "interval": "1",
-            "timezone": "Etc/UTC",
-            "theme": "dark",
-            "style": "1",
-            "locale": "pt",
-            "toolbar_bg": "#f1f3f6",
-            "enable_publishing": false,
-            "allow_symbol_change": true,
-            "container_id": "tv_chart_container"
-          });
+          if ((window as any).TradingView) {
+            new (window as any).TradingView.widget({
+              "width": "100%",
+              "height": "100%",
+              "symbol": "FX:EURUSD",
+              "interval": "1",
+              "timezone": "Etc/UTC",
+              "theme": "dark",
+              "style": "1",
+              "locale": "pt",
+              "toolbar_bg": "#f1f3f6",
+              "enable_publishing": false,
+              "allow_symbol_change": true,
+              "container_id": "tv_chart_container"
+            });
+          }
         };
-        // Criamos um ID específico para o gráfico
         if (widgetContainer) widgetContainer.id = "tv_chart_container";
       }
 
@@ -106,14 +106,16 @@ const WidgetOverlay: React.FC<WidgetOverlayProps> = ({ type, onClose }) => {
           </button>
         </div>
         
-        <div className="flex-1 p-2 md:p-4 overflow-hidden relative">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto relative">
           <div className="tradingview-widget-container h-full w-full" ref={containerRef}>
             <div className="tradingview-widget-container__widget h-full w-full"></div>
           </div>
         </div>
         
         <div className="p-3 md:p-4 bg-black/40 border-t border-white/5 text-center flex items-center justify-center gap-4">
-          <p className="text-[7px] md:text-[8px] font-black text-slate-600 uppercase tracking-widest">Powered by TradingView API</p>
+          <p className="text-[7px] md:text-[8px] font-black text-slate-600 uppercase tracking-widest">
+            Powered by TradingView API
+          </p>
         </div>
       </div>
     </div>
