@@ -9,7 +9,7 @@ import { APP_USERS, REMOTE_PASSWORDS_URL, SESSION_VERSION } from './constants';
 
 type AppView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'DASHBOARD';
 
-const SECURITY_CHECK_INTERVAL = 1000; // Reduzido para 1 segundo para precisão máxima
+const SECURITY_CHECK_INTERVAL = 1000;
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(() => {
@@ -43,9 +43,7 @@ const App: React.FC = () => {
     window.location.reload();
   }, []);
 
-  // Função de validação agora é sensível a mudanças nas constantes globais
   const validateUser = useCallback(async (pass: string): Promise<{isValid: boolean, name?: string}> => {
-    // Verifica contra a lista ATUAL em constants.ts
     const user = APP_USERS.find(u => u.key === pass);
     if (user) return { isValid: true, name: user.name };
 
@@ -66,9 +64,8 @@ const App: React.FC = () => {
     } catch (e) {}
 
     return { isValid: false };
-  }, [APP_USERS]); // Re-calcula se APP_USERS mudar
+  }, []);
 
-  // Efeito de monitoramento de segurança "Ultra Ativo"
   useEffect(() => {
     if (view !== 'DASHBOARD') return;
 
@@ -76,13 +73,11 @@ const App: React.FC = () => {
       const currentToken = localStorage.getItem('ultra_trade_session');
       const savedVersion = localStorage.getItem('ultra_session_version');
 
-      // Check 1: Versão Global
       if (savedVersion !== SESSION_VERSION) {
         handleLogout();
         return;
       }
 
-      // Check 2: Validação da senha ativa
       if (currentToken) {
         const { isValid } = await validateUser(currentToken);
         if (!isValid) {
@@ -93,13 +88,8 @@ const App: React.FC = () => {
       }
     };
 
-    // Check imediato ao montar
     checkSecurity();
-
-    // Loop de verificação em segundo plano
     const interval = setInterval(checkSecurity, SECURITY_CHECK_INTERVAL);
-
-    // SENSORES DE MOVIMENTO: Verifica a cada interação do usuário no app
     const onUserInteraction = () => checkSecurity();
     
     window.addEventListener('mousedown', onUserInteraction);
@@ -121,6 +111,9 @@ const App: React.FC = () => {
   const handleLogin = async (pass: string) => {
     const { isValid, name } = await validateUser(pass);
     if (isValid) {
+      // Delay de 2 segundos para simular processamento pesado do terminal
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const finalName = name || 'Trader';
       localStorage.setItem('ultra_trade_session', pass);
       localStorage.setItem('ultra_trade_user', finalName);
