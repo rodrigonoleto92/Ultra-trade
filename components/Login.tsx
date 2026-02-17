@@ -49,10 +49,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
-  const handleSubscribe = () => {
-    window.open('https://wa.me/5563981170612?text=Olá,%20gostaria%20de%20assinar%20o%20acesso%20VIP%20do%20Ultra%20Trade', '_blank');
-  };
-
   return (
     <div className="flex-1 flex items-center justify-center bg-[#050507] px-4 overflow-hidden relative min-h-screen">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none overflow-hidden">
@@ -129,26 +125,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
-            <p className="text-[8px] text-center text-slate-500 font-black uppercase tracking-[0.2em]">Não possui uma chave de acesso?</p>
-            <button
-              onClick={handleSubscribe}
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 p-[1px] group transition-all active:scale-95 animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-            >
-              <div className="w-full h-full bg-[#0a0a0c] rounded-[15px] flex items-center justify-center gap-3 group-hover:bg-transparent transition-colors">
-                <span className="text-amber-500 font-black uppercase tracking-[0.15em] text-[10px] group-hover:text-slate-950 transition-colors">
-                  ASSINAR VIP AGORA
-                </span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-500 group-hover:text-slate-950 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </div>
-            </button>
-            <div className="flex items-center justify-center gap-2 opacity-40">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Ativação Instantânea via WhatsApp</span>
+          <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center">
+            <p className="text-xs font-black italic logo-gradient-text tracking-[0.2em] uppercase">
+              De trader para trader
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2 opacity-20">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Acesso Criptografado</span>
             </div>
           </div>
         </div>
