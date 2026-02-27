@@ -87,7 +87,6 @@ export const FOREX_TIMEFRAMES = [
 
 // vencimentos 01/02/2027 - Wallace, Eduardo, Tobias
 
-// venc: Joao 25/02026
 
 export const REMOTE_PASSWORDS_URL = 'https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/senhas.txt';
 
