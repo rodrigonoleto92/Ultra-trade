@@ -260,7 +260,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, userName = 'Trader', au
                 </div>
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                   <button onClick={() => setSignalType(SignalType.BINARY)} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.BINARY ? 'logo-gradient-bg text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-600'}`}>OB (BINÁRIAS)</button>
-                  <button onClick={() => setSignalType(SignalType.FOREX)} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black transition-all ${signalType === SignalType.FOREX ? 'logo-gradient-bg text-slate-950 shadow-lg shadow-blue-500/20' : 'text-slate-600'}`}>FOREX / CRIPTO</button>
                 </div>
               </div>
 
